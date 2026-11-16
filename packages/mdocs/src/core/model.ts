@@ -86,6 +86,8 @@ export interface PageModel {
   readonly toc: readonly TocEntry[];
   /** The routes the front matter's `related:` names, as written. */
   readonly related: readonly string[];
+  /** From the front matter's `sidebar.order`: the page's position inside its category. */
+  readonly order?: number | undefined;
   /**
    * `related` once each route has been matched to a scanned page by
    * `resolveRelated`. Absent on a model that has not been through it.

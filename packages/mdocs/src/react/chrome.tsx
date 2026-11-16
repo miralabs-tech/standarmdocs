@@ -2,7 +2,13 @@ import type { ReactNode } from "react";
 import { AXIS_CONTROLS } from "../core/axes";
 import { withBase } from "../core/base";
 import { SEARCH_MOUNT } from "../core/search";
-import { NAV_BAR, NAV_MENU, SIDEBAR_CATEGORY, sidebarBootScript } from "../core/sidebar";
+import {
+  NAV_BAR,
+  NAV_MENU,
+  orderEntries,
+  SIDEBAR_CATEGORY,
+  sidebarBootScript,
+} from "../core/sidebar";
 
 export interface ChromeCategory {
   readonly slug: string;
@@ -16,6 +22,8 @@ export interface ChromeEntry {
   readonly group: string | undefined;
   /** The page's own front matter description, which is what an index grid shows. */
   readonly description: string | undefined;
+  /** The page's `sidebar.order`; pages with one come first in their category. */
+  readonly order?: number | undefined;
 }
 
 export interface ChromeProps {
@@ -79,7 +87,7 @@ export function placeEntries(
     sections: categories
       .map((category) => ({
         category,
-        items: entries.filter((entry) => entry.group === category.slug),
+        items: orderEntries(entries.filter((entry) => entry.group === category.slug)),
       }))
       .filter((section) => section.items.length > 0),
   };

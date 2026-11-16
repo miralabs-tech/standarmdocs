@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { withBase } from "../../core/base";
+import { orderEntries } from "../../core/sidebar";
 import type { ChromeEntry } from "../chrome";
 
 /**
@@ -20,7 +21,7 @@ export function IndexFence({
   readonly entries: readonly ChromeEntry[];
   readonly base?: string;
 }): ReactNode {
-  const items = entries.filter((entry) => entry.group === group);
+  const items = orderEntries(entries.filter((entry) => entry.group === group));
   if (items.length === 0) throw new Error(`\`\`\`index ${group} matches no page`);
 
   return (

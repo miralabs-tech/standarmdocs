@@ -3,6 +3,10 @@
 All notable changes to `@standarx/mdocs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+- Pages are ordered inside a category by front matter `sidebar.order`.
+
 ## [0.2.0]
 
 - `@standarx/mdocs/build`: the programmatic API behind `mdocs build`, for scripts and tests that build a site in-process: `loadConfig(cwd)`, `build(config, options)` (the same options as the CLI, plus `asks: "island"`, which only `mdocs dev` sets from the command line) and `prepareGeneratedRoot(dir)` for a site with no config of its own.

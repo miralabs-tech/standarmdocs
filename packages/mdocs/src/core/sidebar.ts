@@ -69,6 +69,19 @@ export function sidebarBootScript(): string {
   return `(function(s){if(!s)return;${SIDEBAR_BOOT_BODY}})(document.currentScript&&document.currentScript.parentElement)`;
 }
 
+/**
+ * Pages that carry an order first, ascending and tied by route, then the others
+ * in the order they were given.
+ */
+export function orderEntries<T extends { readonly route: string; readonly order?: number | undefined }>(
+  entries: readonly T[],
+): T[] {
+  const ordered = entries
+    .filter((entry) => entry.order !== undefined)
+    .toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.route.localeCompare(b.route));
+  return [...ordered, ...entries.filter((entry) => entry.order === undefined)];
+}
+
 /** On the compact top bar the chrome renders, which only a script ever shows. */
 export const NAV_BAR = "data-mira-bar";
 

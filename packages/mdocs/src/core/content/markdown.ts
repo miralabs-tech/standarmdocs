@@ -197,6 +197,15 @@ export function parsePage(source: string, options: ParsePageOptions): PageModel 
   }
   closeSection();
 
+  const rawOrder = data["sidebar.order"];
+  let order: number | undefined;
+  if (rawOrder !== undefined) {
+    order = Number(rawOrder);
+    if (rawOrder.trim() === "" || !Number.isFinite(order)) {
+      throw new Error(`sidebar.order must be a number in ${options.route}, got "${rawOrder}"`);
+    }
+  }
+
   return {
     route: options.route,
     title: data["title"] ?? heading ?? options.route,
@@ -205,5 +214,6 @@ export function parsePage(source: string, options: ParsePageOptions): PageModel 
     segments: groupTabs(sections, vocabulary),
     toc,
     related: lists["related"] ?? [],
+    order,
   };
 }

@@ -105,7 +105,7 @@ Entry points of the package:
 
 ## ✨ Features
 
-- **Markdown pages.** Front matter (`title`, `description`, `related`), headings with stable anchors, tables, fenced code highlighted with Shiki, and relative `.md` links that are checked at build time.
+- **Markdown pages.** Front matter (`title`, `description`, `related`, `sidebar.order`; pages with a `sidebar.order` come first in their category, ascending, then the others in file order), headings with stable anchors, tables, fenced code highlighted with Shiki, and relative `.md` links that are checked at build time.
 - **Live React demos with prerender.** A ```` ```demo <id> ```` fence loads `demosDir/<id>.tsx`, prerenders it into the page and hydrates only that subtree. Each demo is rendered once per entry of the matrix, so a theme, a density or a reduced-motion variant is visible at a glance, and the reader can switch the axes from the page.
 - **Props tables.** A ```` ```props <name> ```` fence renders `apiDir/<name>.json`, rows of `name`, `type` and `notes`. `apiDir` can be a folder of the site or a folder inside an installed package.
 - **Index and home pages.** ```` ```index <group> ```` renders the pages of a group as cards; a folder without an `index.md` gets a front page listing every page.
@@ -244,7 +244,7 @@ await build(config, { chrome: "auto", mode: "production" });
 
 - The CLI runs on bun, not on node: it builds with `Bun.build` and resolves modules with `Bun.resolveSync`.
 - The package is ESM only.
-- Front matter is a small YAML subset: `key: value` lines and one-line `[a, b]` lists. Block sequences are not read.
+- Front matter is a small YAML subset: `key: value` lines, one level of nesting (`sidebar:` then `  order: 2`) and one-line `[a, b]` lists. Block sequences are not read.
 - Demos are React 19 modules. Another framework needs another renderer.
 - A demo is bundled with the page's client script and split into its own chunk; a specifier the bundler cannot follow statically is not split.
 - The static chrome has no search. Search and the other live behaviours come from an optional interactive package that is not part of this repository.
