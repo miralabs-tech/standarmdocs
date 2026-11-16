@@ -1,0 +1,101 @@
+{
+  "name": "@standarx/mdocs",
+  "version": "0.1.0",
+  "description": "Markdown documentation sites with live React demos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miralabs-tech/standarmdocs.git",
+    "directory": "packages/mdocs"
+  },
+  "homepage": "https://github.com/miralabs-tech/standarmdocs#readme",
+  "bugs": "https://github.com/miralabs-tech/standarmdocs/issues",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "bin": {
+    "mdocs": "./dist/cli/mdocs.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ask": {
+      "types": "./dist/core/ask-protocol.d.ts",
+      "import": "./dist/core/ask-protocol.js"
+    },
+    "./base": {
+      "types": "./dist/core/base.d.ts",
+      "import": "./dist/core/base.js"
+    },
+    "./client/axes": {
+      "types": "./dist/client/axes.d.ts",
+      "import": "./dist/client/axes.js"
+    },
+    "./client/tabs": {
+      "types": "./dist/client/tabs.d.ts",
+      "import": "./dist/client/tabs.js"
+    },
+    "./client/toc": {
+      "types": "./dist/client/toc.d.ts",
+      "import": "./dist/client/toc.js"
+    },
+    "./config": {
+      "types": "./dist/cli/config.d.ts",
+      "import": "./dist/cli/config.js"
+    },
+    "./react/hydrate": {
+      "types": "./dist/react/hydrate.d.ts",
+      "import": "./dist/react/hydrate.js"
+    },
+    "./react/registry": {
+      "types": "./dist/react/registry.d.ts",
+      "import": "./dist/react/registry.js"
+    },
+    "./search": {
+      "types": "./dist/core/search.d.ts",
+      "import": "./dist/core/search.js"
+    },
+    "./sidebar": {
+      "types": "./dist/core/sidebar.d.ts",
+      "import": "./dist/core/sidebar.js"
+    },
+    "./styles/docs.css": "./dist/styles/docs.css"
+  },
+  "scripts": {
+    "build": "rm -rf dist && bun build src/index.ts src/core/ask-protocol.ts src/core/base.ts src/client/axes.ts src/client/tabs.ts src/client/toc.ts src/cli/config.ts src/react/hydrate.tsx src/react/registry.ts src/core/search.ts src/core/sidebar.ts src/cli/mdocs.ts --target bun --packages external --splitting --root src --outdir dist && tsc -p tsconfig.build.json --emitDeclarationOnly && bun scripts/fix-dts.ts && mkdir -p dist/styles && cp src/styles/docs.css dist/styles/docs.css",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:fixture": "cd tests/fixtures/site && bun ../../../src/cli/mdocs.ts build --chrome=static",
+    "check:bundle": "bun run build:fixture && bun scripts/check-bundle.ts tests/fixtures/site/dist"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0",
+    "shiki": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitest/browser-playwright": "^4.1.11",
+    "playwright": "^1.62.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  }
+}

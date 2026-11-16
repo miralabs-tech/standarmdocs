@@ -1,0 +1,1312 @@
+/*
+ * The documentation chrome, painted in tokens of its own.
+ *
+ * Every colour, space and radius below is a `--docs-*` custom property, and the
+ * defaults for all of them are defined in the first block of this file, so the
+ * sheet looks right with nothing else loaded. It spends no `--mira-*`: a site
+ * that wants the look of MiraLabs UI loads the theme's sheet after
+ * this file, which maps each `--docs-*` onto the library token it stands for.
+ * That mapping flips on `data-mira-theme` and `data-mira-density` with the
+ * library, which is also why a demo island carrying `data-mira-theme="light"`
+ * comes out light on a dark page without a single rule saying so.
+ *
+ * Plain CSS and not SCSS, deliberately: a compiled sheet is the only thing a
+ * consumer gets, so a site that needs a build step to look right is a site that
+ * has stopped proving what it claims. The one thing that would need SCSS is the
+ * glass mixin — see the note over `.mira-docs__sidebar`.
+ *
+ * The library's own reset is scoped to `[data-scope]` and touches nothing else,
+ * so the page-level ground rules are this file's job.
+ */
+
+/*
+ * Zero specificity, so any later rule that sets one of these names wins without
+ * a fight. The colours are `light-dark()` pairs, and they resolve against the
+ * `color-scheme` of the element that spends them: that is what lets an element
+ * carrying `data-mira-theme` repaint its own subtree.
+ */
+:where(:root) {
+  color-scheme: light dark;
+
+  --docs-fg: light-dark(#000, #fff);
+  --docs-muted: light-dark(#3c3c4399, #ebebf5b3);
+  --docs-border: light-dark(#0000001f, #ffffff2b);
+  --docs-accent: light-dark(#007aff, #0a84ff);
+  --docs-on-accent: #fff;
+  --docs-link: light-dark(#007aff, #0a84ff);
+  --docs-bg: light-dark(#f2f2f7, #000);
+  --docs-surface: light-dark(#fff, #1c1c1e);
+  --docs-elevated: light-dark(#fff, #1c1c1e);
+  --docs-fill: light-dark(#74748014, #7676802e);
+
+  --docs-border-width-thin: 1px;
+  --docs-border-width-medium: 2px;
+
+  --docs-focus-ring-color: color-mix(in srgb, var(--docs-accent) 90%, transparent);
+  --docs-focus-ring-offset: 2px;
+  --docs-focus-ring-width: 3px;
+
+  --docs-duration-150: 0.15s;
+  --docs-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --docs-font-family-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --docs-font-family-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --docs-font-weight-regular: 400;
+  --docs-font-weight-medium: 500;
+  --docs-font-weight-semibold: 600;
+  --docs-font-weight-bold: 700;
+
+  --docs-radius-2xs: 4px;
+  --docs-radius-sm: 8px;
+  --docs-radius-md: 10px;
+  --docs-radius-lg: 14px;
+
+  --docs-space-1: 4px;
+  --docs-space-2: 8px;
+  --docs-space-3: 12px;
+  --docs-space-4: 16px;
+  --docs-space-5: 20px;
+  --docs-space-6: 24px;
+  --docs-space-8: 32px;
+  --docs-space-16: 64px;
+  --docs-space-20: 80px;
+
+  --docs-hit-target-min: 24px;
+  --docs-z-sticky: 100;
+}
+
+@media (pointer: coarse) {
+  :where(:root) {
+    --docs-hit-target-min: 44px;
+  }
+}
+
+:where([data-mira-theme="light"]) {
+  color-scheme: light;
+}
+
+:where([data-mira-theme="dark"]) {
+  color-scheme: dark;
+}
+
+:root {
+  /*
+   * Text sizes are the one scale the library does not publish: its size tokens
+   * are per-control (`--mira-control-font-size-md`) because a control's text is
+   * sized by its density, not by a document scale. Prose has no density, so it
+   * gets a scale of its own here rather than borrowing one that would drift the
+   * day a density changes.
+   */
+  --docs-text-xs: 0.75rem;
+  --docs-text-sm: 0.875rem;
+  --docs-text-base: 1rem;
+  --docs-text-lg: 1.25rem;
+  --docs-text-xl: 1.75rem;
+  --docs-text-2xl: 2.25rem;
+
+  --docs-sidebar-width: 17.5rem;
+  /*
+   * 45rem is the usual prose measure and it is wrong for these pages: every one
+   * of them ends in a three-column props table read from the source, and at
+   * 45rem the `Type` column wraps a generic onto four lines.
+   */
+  --docs-content-width: 52rem;
+  --docs-toc-width: 15rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--docs-bg);
+  font-family: var(--docs-font-family-sans);
+  font-size: var(--docs-text-base);
+  line-height: 1.6;
+  color: var(--docs-fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Layout                                                                     */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * `minmax(0, 1fr)` and not `1fr`: a grid track's automatic minimum is its
+ * content, so a props table carrying an eighty-character generic would push the
+ * column wider than the viewport and scroll the whole page sideways. The zero
+ * minimum is what lets the overflow belong to the table instead.
+ */
+.mira-docs {
+  display: grid;
+  grid-template-columns: var(--docs-sidebar-width) minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Sidebar                                                                    */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Opaque, not glass, and not by omission. The material assumes content moving
+ * under it; a sidebar sits on a flat ground, where `backdrop-filter` samples a
+ * single colour and costs a compositing layer to reproduce it. The mixin says as
+ * much about the knobs, for the same reason. The site's one honest use for glass
+ * is a fixed header with the page scrolling beneath it — when there is a header
+ * worth having.
+ */
+.mira-docs__sidebar {
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  height: 100vh;
+  padding: var(--docs-space-6) var(--docs-space-4);
+  border-inline-end: var(--docs-border-width-thin) solid var(--docs-border);
+  background: var(--docs-bg);
+}
+
+/* The category groups are the sidebar's structure, so they read as structure:
+   small, spaced and quiet — never as another level of link. */
+.mira-docs__sidebar h2 {
+  margin: 0;
+  font-size: var(--docs-text-xs);
+  font-weight: var(--docs-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+}
+
+/*
+ * Each category is a `<details>`, so it folds with no script and answers Enter
+ * and Space on its own. The summary carries the heading and the spacing the
+ * heading used to; the marker is the platform's, hidden, and redrawn as a
+ * chevron in `currentcolor` so it follows the theme — the native triangle does
+ * not, and it is the wrong glyph for a sidebar anyway.
+ */
+.mira-docs__sidebar summary {
+  display: flex;
+  align-items: center;
+  gap: var(--docs-space-2);
+  margin-block: var(--docs-space-5) var(--docs-space-2);
+  padding-inline: var(--docs-space-2);
+  border-radius: var(--docs-radius-sm);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  color: var(--docs-muted);
+}
+
+.mira-docs__sidebar summary::-webkit-details-marker {
+  display: none;
+}
+
+.mira-docs__sidebar summary::after {
+  content: "";
+  flex: none;
+  inline-size: 0.5em;
+  block-size: 0.5em;
+  margin-inline-start: auto;
+  margin-block-start: -0.25em;
+  border-inline-end: var(--docs-border-width-medium) solid currentcolor;
+  border-block-end: var(--docs-border-width-medium) solid currentcolor;
+  rotate: 45deg;
+  transition: rotate var(--docs-duration-150) var(--docs-ease-out);
+}
+
+.mira-docs__sidebar details:not([open]) > summary::after {
+  margin-block-start: 0;
+  rotate: -45deg;
+}
+
+.mira-docs__sidebar details:not([open]) > summary:dir(rtl)::after {
+  rotate: 45deg;
+}
+
+.mira-docs__sidebar nav > section:first-child summary {
+  margin-block-start: 0;
+}
+
+.mira-docs__sidebar details > ul {
+  margin-inline-start: var(--docs-space-3);
+  padding-inline-start: var(--docs-space-2);
+  border-inline-start: var(--docs-border-width-thin) solid var(--docs-border);
+}
+
+.mira-docs__sidebar summary:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__sidebar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mira-docs__sidebar a {
+  display: block;
+  padding: var(--docs-space-1) var(--docs-space-2);
+  border-radius: var(--docs-radius-sm);
+  font-size: var(--docs-text-sm);
+  text-decoration: none;
+  color: var(--docs-muted);
+  transition: background-color var(--docs-duration-150) var(--docs-ease-out);
+}
+
+/*
+ * Gated on a fine pointer, like the library's own components: a fill that
+ * appears on a merely-tapped row reads as a selection that is not there, and it
+ * outlives the tap on touch.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .mira-docs__sidebar a:not([aria-current]):hover {
+    background-color: var(--docs-fill);
+    color: var(--docs-fg);
+  }
+}
+
+/*
+ * The page the reader is on, and it has to be unmistakable. It used to be the
+ * tertiary fill — twelve percent of grey, measured — which is one step from the
+ * hover fill and reads as "recently hovered" rather than "here". A macOS sidebar
+ * answers the same question with the accent: a filled row and ink on the tint.
+ */
+.mira-docs__sidebar a[aria-current="page"] {
+  background-color: var(--docs-accent);
+  font-weight: var(--docs-font-weight-medium);
+  color: var(--docs-on-accent);
+}
+
+.mira-docs__sidebar a:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-accent);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__banner {
+  margin-block: 0 var(--docs-space-4);
+  padding: var(--docs-space-2) var(--docs-space-3);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-fill);
+  font-size: var(--docs-text-xs);
+  color: var(--docs-muted);
+}
+
+/* The pages that head a section rather than sitting in one — the site root and
+   each landing page. No heading over them, because the thing a heading would say
+   is the site's own name. */
+.mira-docs__lead {
+  margin-block: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* The axis switch                                                            */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Hidden until the boot script raises its flag on `<html>`, and hidden by CSS
+ * rather than by `hidden` on the element — the two differ in exactly the case
+ * that matters. These buttons write an attribute on the root and mean nothing
+ * without script, so a reader with none should never see them; `display: none`
+ * here is the default state, and the flag is what lifts it.
+ *
+ * The flag is set from an inline `<head>` script, before first paint, so the
+ * control is never revealed in a second pass and the sidebar is laid out once.
+ */
+.mira-docs__axes {
+  display: none;
+}
+
+:root[data-mira-axes-ready] .mira-docs__axes {
+  display: grid;
+  gap: var(--docs-space-2);
+  margin-block-end: var(--docs-space-5);
+}
+
+.mira-docs__axis {
+  display: flex;
+  gap: var(--docs-border-width-thin);
+  padding: var(--docs-border-width-thin);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-fill);
+}
+
+.mira-docs__axis button {
+  flex: 1;
+  padding: var(--docs-space-1) var(--docs-space-2);
+  border: none;
+  border-radius: var(--docs-radius-sm);
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--docs-text-xs);
+  color: var(--docs-muted);
+  cursor: pointer;
+}
+
+.mira-docs__axis button[aria-pressed="true"] {
+  background: var(--docs-elevated);
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__axis button:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Search trigger                                                             */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Two empty mount points, one in the sidebar and one in the compact bar, and both
+ * hidden until the ui package has mounted the palette's trigger into them and
+ * raised its flag on `<html>`. Without script, or under `--chrome=static`, they
+ * stay empty and take no room. The palette itself lives in the UI package's sheet.
+ */
+.mira-docs__search,
+.mira-docs__bar-search {
+  display: none;
+}
+
+:root[data-mira-search-ready] .mira-docs__search {
+  display: block;
+  margin-block-end: var(--docs-space-4);
+}
+
+:root[data-mira-search-ready] .mira-docs__bar-search {
+  display: flex;
+  margin-inline-start: auto;
+}
+
+/* A faux field: it reads as the input it opens, and it is a button. */
+.mira-docs__search-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--docs-space-3);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--docs-hit-target-min);
+  padding: var(--docs-space-1) var(--docs-space-3);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-surface);
+  font-family: inherit;
+  font-size: var(--docs-text-sm);
+  text-align: start;
+  color: var(--docs-muted);
+  cursor: pointer;
+}
+
+.mira-docs__search-trigger:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__search-trigger kbd {
+  font-family: var(--docs-font-family-mono);
+  font-size: var(--docs-text-xs);
+}
+
+.mira-docs__bar-search .mira-docs__search-trigger {
+  inline-size: auto;
+}
+
+.mira-docs__bar-search kbd {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Article                                                                    */
+/* ------------------------------------------------------------------------- */
+
+.mira-docs__main {
+  width: 100%;
+  max-width: var(--docs-content-width);
+  padding: var(--docs-space-8) var(--docs-space-6) var(--docs-space-20);
+}
+
+.mira-docs__main > h1 {
+  margin-block: 0 var(--docs-space-6);
+  font-size: var(--docs-text-2xl);
+  font-weight: var(--docs-font-weight-bold);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.mira-docs__prose > :first-child {
+  margin-block-start: 0;
+}
+
+.mira-docs__prose h2 {
+  margin-block: var(--docs-space-8) var(--docs-space-3);
+  font-size: var(--docs-text-xl);
+  font-weight: var(--docs-font-weight-semibold);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.mira-docs__prose h3 {
+  margin-block: var(--docs-space-6) var(--docs-space-2);
+  font-size: var(--docs-text-lg);
+  font-weight: var(--docs-font-weight-semibold);
+}
+
+/* A heading reached by an anchor lands a little below the top edge, not flush
+   against it. */
+.mira-docs__prose h2,
+.mira-docs__prose h3 {
+  scroll-margin-top: var(--docs-space-6);
+}
+
+.mira-docs__prose p,
+.mira-docs__prose ul,
+.mira-docs__prose ol {
+  margin-block: var(--docs-space-3);
+}
+
+.mira-docs__prose a {
+  color: var(--docs-link);
+  text-underline-offset: 0.15em;
+}
+
+.mira-docs__prose strong {
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__prose :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--docs-radius-2xs);
+  background: var(--docs-fill);
+  font-family: var(--docs-font-family-mono);
+  font-size: 0.9em;
+}
+
+/*
+ * The code block scrolls inside itself and the page never does — the same rule
+ * the grid's zero minimum enforces one level up. `tab-size` because the fences
+ * carry real source, indented with what the source was indented with.
+ */
+.mira-docs__prose pre {
+  overflow-x: auto;
+  margin-block: var(--docs-space-4);
+  padding: var(--docs-space-4);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-surface);
+  font-family: var(--docs-font-family-mono);
+  font-size: var(--docs-text-sm);
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+/* ------------------------------------------------------------------------- */
+/* On this page                                                               */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * One list, drawn twice. Under 75rem it is a fold at the top of the article; from
+ * 75rem it is a sticky column beside it, and the fold is gone. Both are anchors
+ * in a `<nav>`, so the page reads the same with no script — the current item
+ * below is the only thing the module adds.
+ */
+.docs-toc--rail {
+  display: none;
+}
+
+.docs-toc--fold {
+  margin-block: 0 var(--docs-space-6);
+  padding: var(--docs-space-2) var(--docs-space-3);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-fill);
+}
+
+.docs-toc summary {
+  font-size: var(--docs-text-xs);
+  font-weight: var(--docs-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.docs-toc summary:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.docs-toc__title {
+  margin: 0 0 var(--docs-space-2);
+  font-size: var(--docs-text-xs);
+  font-weight: var(--docs-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+}
+
+.docs-toc__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-toc details > .docs-toc__list {
+  margin-block-start: var(--docs-space-2);
+}
+
+.docs-toc__list .docs-toc__list {
+  padding-inline-start: var(--docs-space-3);
+}
+
+.docs-toc a {
+  display: block;
+  padding: var(--docs-space-1) var(--docs-space-2);
+  border-radius: var(--docs-radius-sm);
+  font-size: var(--docs-text-sm);
+  line-height: 1.4;
+  text-decoration: none;
+  color: var(--docs-muted);
+  transition: background-color var(--docs-duration-150) var(--docs-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .docs-toc a:not([aria-current]):hover {
+    background-color: var(--docs-fill);
+    color: var(--docs-fg);
+  }
+}
+
+.docs-toc a[aria-current="location"] {
+  font-weight: var(--docs-font-weight-medium);
+  color: var(--docs-fg);
+}
+
+.docs-toc a:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-accent);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+@media (min-width: 75rem) {
+  .mira-docs--toc {
+    grid-template-columns:
+      var(--docs-sidebar-width)
+      minmax(0, var(--docs-content-width))
+      var(--docs-toc-width);
+  }
+
+  .docs-toc--fold {
+    display: none;
+  }
+
+  .docs-toc--rail {
+    display: block;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    max-height: 100vh;
+    padding: var(--docs-space-8) var(--docs-space-4) var(--docs-space-6);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* The index grid                                                             */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * `auto-fill` and not `auto-fit`: a category with two components should render
+ * two cards of the usual width, not two stretched across the row. The minimum is
+ * the longest component name plus its description's first line.
+ */
+.mira-docs__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: var(--docs-space-3);
+  margin-block: var(--docs-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.mira-docs__grid li {
+  padding: var(--docs-space-4);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-elevated);
+}
+
+.mira-docs__grid a {
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+  text-decoration: none;
+}
+
+.mira-docs__grid a:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__grid p {
+  margin-block: var(--docs-space-1) 0;
+  font-size: var(--docs-text-sm);
+  color: var(--docs-muted);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Ask — a question put to the reader, drawn read-only                         */
+/* ------------------------------------------------------------------------- */
+
+.mira-ask {
+  margin-block: var(--docs-space-4);
+  padding: var(--docs-space-4);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-elevated);
+}
+
+.mira-ask__state {
+  margin: 0;
+  font-size: var(--docs-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+}
+
+.mira-ask__question {
+  margin-block: var(--docs-space-1) var(--docs-space-3);
+  font-weight: var(--docs-font-weight-semibold);
+}
+
+.mira-ask__options {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--docs-text-sm);
+}
+
+.mira-ask__options li {
+  padding-block: var(--docs-space-1);
+  color: var(--docs-muted);
+}
+
+.mira-ask__options li::before {
+  content: "\25CB\00A0";
+}
+
+.mira-ask__options li[data-chosen] {
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-ask__options li[data-chosen]::before {
+  content: "\25CF\00A0";
+}
+
+.mira-ask__text,
+.mira-ask__comment {
+  margin-block: var(--docs-space-3) 0;
+  font-size: var(--docs-text-sm);
+  white-space: pre-wrap;
+}
+
+.mira-ask__comment {
+  color: var(--docs-muted);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tables — the keyboard tables in prose, and the generated props tables       */
+/* ------------------------------------------------------------------------- */
+
+.mira-docs__prose table,
+.mira-docs__props {
+  width: 100%;
+  margin-block: var(--docs-space-4);
+  border-collapse: collapse;
+  font-size: var(--docs-text-sm);
+  text-align: start;
+}
+
+.mira-docs__prose th,
+.mira-docs__props th {
+  padding: var(--docs-space-2) var(--docs-space-3);
+  border-block-end: var(--docs-border-width-thin) solid var(--docs-border);
+  font-weight: var(--docs-font-weight-semibold);
+  text-align: start;
+  vertical-align: baseline;
+}
+
+.mira-docs__prose td,
+.mira-docs__props td {
+  padding: var(--docs-space-3);
+  border-block-end: var(--docs-border-width-thin) solid var(--docs-border);
+  vertical-align: baseline;
+}
+
+/* Column headers only. A props table's row header is a prop name and has to
+   stay ordinary text; `thead th` is the one that reads as a label. */
+.mira-docs__props thead th {
+  font-size: var(--docs-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+}
+
+.mira-docs__props caption {
+  margin-block-end: var(--docs-space-2);
+  font-family: var(--docs-font-family-mono);
+  font-size: var(--docs-text-sm);
+  font-weight: var(--docs-font-weight-semibold);
+  text-align: start;
+  color: var(--docs-fg);
+}
+
+.mira-docs__props code {
+  font-family: var(--docs-font-family-mono);
+}
+
+/*
+ * A long union has no spaces in it, so nothing else would break it and the table
+ * simply grows past the content column. Restricted to the cells: a prop name is
+ * a `th[scope="row"]`, and breaking one mid-word — "presenta / tion?" — turns an
+ * identifier the reader has to type into two things that are not it.
+ */
+.mira-docs__props td code {
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Both of the narrow columns are stated, because stating only one moves the
+ * problem. `width: 1%` is the shrink-to-fit idiom — under `border-collapse` a
+ * width below the content's minimum is raised to it, so paired with `nowrap` it
+ * means "exactly the longest name". Left to itself the browser handed that
+ * column four characters and spent the slack on the notes; told only about the
+ * name, it took the slack out of the type instead and broke `DialogRole` in two.
+ */
+.mira-docs__props th[scope="row"] {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.mira-docs__props thead th:nth-child(2) {
+  width: 28%;
+}
+
+/* The type column, and only that one. It is `td:first-of-type` rather than the
+   second child because the prop name is a `th[scope="row"]`, not a cell: the
+   name reads as a name, the type should read as a type.
+
+   The exclusion is not defensive. A table with no rows states itself in a single
+   cell, and that cell is `td:first-of-type` by construction — without the
+   `:not()` a whole union would be drawn as a type chip stretched across the
+   table. The hook has to sit on the cell: the site's own gate counts
+   `<table class="mira-docs__props">` as an exact string, so a second class on the
+   table would make it count zero tables on every page. */
+.mira-docs__props td:first-of-type:not(.mira-docs__definition) code {
+  padding: 0.1em 0.35em;
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-sm);
+  color: var(--docs-muted);
+}
+
+/*
+ * The heading its author wrote above a run of members, as the row that opens
+ * that run's `<tbody>`.
+ *
+ * Hooked on the attribute rather than on a class, because the attribute is
+ * already the statement: `scope="rowgroup"` is what makes the band a header of
+ * exactly the rows in its own `tbody`, so it is the thing to style. At (0,2,1)
+ * it also outranks the only other rule here that reaches the cell — the grouped
+ * `.mira-docs__prose th, .mira-docs__props th` above, at (0,1,1) — on
+ * specificity alone, so source order never decides the outcome.
+ *
+ * What is deliberately NOT restated is what makes it sit right: the
+ * `border-block-end` hairline, the semibold, the `text-align: start` and the
+ * inline half of the padding all come from that same rule, and the inline
+ * padding is what keeps the heading on the exact left edge of the prop names
+ * under it. Overriding only the block longhands of a generic `padding`
+ * shorthand is what buys all four.
+ *
+ * `th[scope="row"]` cannot reach it — `width: 1%` and `nowrap` on a sentence
+ * would be ruinous, and the selector is an exact attribute match, so "rowgroup"
+ * is not "row". `thead th` cannot either, the band being in a `tbody`: that one
+ * is deliberate rather than a near miss, since its uppercase would uppercase
+ * `DialogMachineProps`, an identifier the reader has to type.
+ *
+ * No `display` on anything here. Nothing in a props table is script-toggled, and
+ * the tab strip's `:not([hidden])` rule stays the only one that needs the care.
+ */
+.mira-docs__props th[scope="rowgroup"] {
+  padding-block: var(--docs-space-4) var(--docs-space-2);
+  background: var(--docs-fill);
+  font-size: var(--docs-text-xs);
+  color: var(--docs-muted);
+}
+
+/*
+ * The band is a `th`, so it is semibold at the small size, and one real heading
+ * carries `DialogMachineProps` in backticks over eighteen rows. Left alone that
+ * code span inherits both, and a heading partly bolder than itself reads as two
+ * headings. `1em` and not a token: the size to match is this cell's, whatever
+ * this cell becomes.
+ */
+.mira-docs__props th[scope="rowgroup"] code {
+  font-size: 1em;
+  font-weight: var(--docs-font-weight-regular);
+}
+
+/* The first run needs no air above it — the column headers already state that
+   boundary. On a table whose author left rows above the first heading this
+   simply does not match, the air belonging to the group and not to the top. */
+.mira-docs__props tbody:first-of-type th[scope="rowgroup"] {
+  padding-block-start: var(--docs-space-2);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tabs                                                                       */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * One rule this block cannot break: neither the strip nor a panel may carry an
+ * unconditional `display`. The boot script hides with the `hidden` attribute,
+ * whose whole force is the user agent's `display: none` — and any author
+ * `display` outranks it. A panel given `display: grid` here would be a panel
+ * that never hides again, on every page at once, and the markup would still look
+ * right in a diff. So the strip states its `display` under `:not([hidden])`, and
+ * the panel states none at all.
+ */
+.mira-docs__tablist:not([hidden]) {
+  display: flex;
+}
+
+.mira-docs__tablist {
+  gap: var(--docs-space-1);
+  /* Scrolls inside itself so the page never does — the same rule the code
+     blocks keep. Six tabs at a touch density overflow a narrow column. */
+  overflow-x: auto;
+  margin-block: var(--docs-space-8) var(--docs-space-5);
+  border-block-end: var(--docs-border-width-thin) solid var(--docs-border);
+}
+
+.mira-docs__tablist button {
+  flex: none;
+  padding: var(--docs-space-2) var(--docs-space-3);
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--docs-text-sm);
+  color: var(--docs-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Inset rather than a border, so selecting a tab never moves the row by the
+   width of the mark it gains. */
+.mira-docs__tablist button[aria-selected="true"] {
+  box-shadow: inset 0 -2px 0 var(--docs-accent);
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__tablist button:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: calc(-1 * var(--docs-focus-ring-width));
+}
+
+/*
+ * The panel's own `##` heading, once a tab carries the same word.
+ *
+ * Hidden from the eye and kept for everything else: the heading is what the
+ * author wrote, it is what a reader without script sees, and it is what holds
+ * the page's outline together for a screen reader that navigates by heading.
+ * Removing it from the markup would have bought the same look and cost all
+ * three. Scoped to the ready flag for the same reason — with the script blocked
+ * there is no tab to say the word, so the heading has to say it.
+ */
+[data-mira-tabs-ready] .mira-docs__tabpanel > .mira-docs__prose:first-child > h2:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Demos                                                                      */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Never glass: every stage on this site holds real library components, and most
+ * of them — buttons, menus, popovers — are glass themselves. Stacking the
+ * material is the one thing the mixin refuses outright, so the card is the
+ * opaque elevated surface the kits pair with a grouped page.
+ */
+.mira-demo {
+  display: grid;
+  overflow: hidden;
+  margin-block: var(--docs-space-5);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-lg);
+}
+
+/*
+ * One island per matrix entry, and each one paints its own ground: an island
+ * carrying `data-mira-theme="light"` resolves these very tokens to their light
+ * values, so a light demo comes out light on a dark page with no rule of its
+ * own. Painting the card instead of the island would defeat exactly that.
+ *
+ * Nothing here sets a font-size: the controls are sized by the library's density
+ * tokens, and overriding one would make the density axis a lie on the surface
+ * built to demonstrate it.
+ *
+ * `align-content` and not `place-content`: centring the block is wanted,
+ * centring the track is not — a demo that asks for the full width, a slider or a
+ * toolbar, still gets it because the column stays `1fr`.
+ */
+.mira-island {
+  display: grid;
+  gap: var(--docs-space-4);
+  align-content: center;
+  justify-items: center;
+  min-height: 11rem;
+  padding: var(--docs-space-6) var(--docs-space-5);
+  background: var(--docs-surface);
+}
+
+.mira-demo__stage {
+  display: grid;
+}
+
+.mira-island + .mira-island {
+  border-block-start: var(--docs-border-width-thin) solid var(--docs-border);
+}
+
+/* ------------------------------------------------------------------------- */
+/* The source listing under a demo                                            */
+/* ------------------------------------------------------------------------- */
+
+.mira-demo__code {
+  border-block-start: var(--docs-border-width-thin) solid var(--docs-border);
+  background: var(--docs-bg);
+}
+
+/*
+ * Both captions are in the markup and CSS picks one on `[open]`, which is what
+ * makes the fold cost no script at all. A button with a state would be an island
+ * on every page of the site for a disclosure `<details>` already does.
+ */
+.mira-demo__toggle {
+  padding: var(--docs-space-2) var(--docs-space-4);
+  font-size: var(--docs-text-xs);
+  font-weight: var(--docs-font-weight-semibold);
+  letter-spacing: 0.02em;
+  color: var(--docs-muted);
+  cursor: pointer;
+}
+
+.mira-demo__toggle:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: calc(var(--docs-focus-ring-offset) * -1);
+}
+
+.mira-demo__toggle-open,
+.mira-demo__code[open] .mira-demo__toggle-shown {
+  display: none;
+}
+
+.mira-demo__code[open] .mira-demo__toggle-open {
+  display: inline;
+}
+
+/*
+ * The listing scrolls inside itself, and its own border is dropped: the card
+ * around it already draws one, and `.mira-docs__prose pre` is a different block
+ * in a different container.
+ */
+.mira-demo__code pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: var(--docs-space-4);
+  border-block-start: var(--docs-border-width-thin) solid var(--docs-border);
+  font-family: var(--docs-font-family-mono);
+  font-size: var(--docs-text-sm);
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Two-theme syntax colouring                                                 */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Shiki writes the light colour inline and the dark one as `--shiki-dark` on the
+ * same span, so one build carries both themes and the listing follows the reader's
+ * switch instead of being frozen at whatever the build chose.
+ *
+ * `!important` because the colour it overrides is an inline style, which nothing
+ * else can outrank. Scoped to `.shiki` so it reaches shiki's output and nothing
+ * of the library's own.
+ *
+ * Two selectors and not one: the explicit dark theme, and the auto case, which is
+ * the media query with the explicit *light* choice excluded — `[data-mira-theme]`
+ * absent is auto, and a reader who chose light on a dark system has to get light.
+ */
+:root[data-mira-theme="dark"] .shiki,
+:root[data-mira-theme="dark"] .shiki span {
+  background-color: var(--shiki-dark-bg) !important;
+  color: var(--shiki-dark) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mira-theme="light"]) .shiki,
+  :root:not([data-mira-theme="light"]) .shiki span {
+    background-color: var(--shiki-dark-bg) !important;
+    color: var(--shiki-dark) !important;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Narrow viewports                                                           */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Below 64rem the sidebar stops being a column and becomes the top of the
+ * document. With no script it is still the whole navigation, in the flow.
+ *
+ * With script the client module mounts a drawer and raises
+ * `data-mira-drawer-ready` on `<html>`; only then does the column give way to the
+ * compact bar, so the menu button is never on screen before it can be pressed.
+ * The breakpoint is spelled in `rem` in `core/sidebar.ts` too, as `NAV_NARROW`.
+ *
+ * The page is a plain block here and not a one-column grid: a grid at
+ * `min-height: 100vh` stretches its auto rows to fill the screen, which left a
+ * gap under the bar on a short page, and it would also confine the bar's
+ * `position: sticky` to its own row.
+ */
+@media (width < 64rem) {
+  .mira-docs {
+    display: block;
+  }
+
+  .mira-docs__sidebar {
+    position: static;
+    height: auto;
+    border-inline-end: none;
+    border-block-end: var(--docs-border-width-thin) solid var(--docs-border);
+  }
+
+  .mira-docs__main {
+    padding: var(--docs-space-6) var(--docs-space-4) var(--docs-space-16);
+  }
+
+  :root[data-mira-drawer-ready] .mira-docs > .mira-docs__sidebar {
+    display: none;
+  }
+
+  :root[data-mira-drawer-ready] .mira-docs__bar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: var(--docs-z-sticky);
+    align-items: center;
+    gap: var(--docs-space-3);
+    padding: var(--docs-space-2) var(--docs-space-4);
+    border-block-end: var(--docs-border-width-thin) solid var(--docs-border);
+    background: var(--docs-bg);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Navigation drawer                                                          */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * The bar is in every page and is shown on none of them without script, nor at
+ * 64rem and up, where the sidebar is a persistent column.
+ */
+.mira-docs__bar {
+  display: none;
+}
+
+.mira-docs__bar-name {
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--docs-hit-target-min);
+  min-block-size: var(--docs-hit-target-min);
+  padding: 0;
+  border: none;
+  border-radius: var(--docs-radius-sm);
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--docs-text-lg);
+  line-height: 1;
+  color: var(--docs-fg);
+  cursor: pointer;
+}
+
+.mira-docs__menu:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+/*
+ * The panel is the library's drawer on its dialog material. What is set here is
+ * its width, which beats the library's zero-specificity rule for it (a single
+ * detent makes the width the only thing that rule decides), and the column layout
+ * that lets the copied sidebar scroll under the title.
+ */
+.mira-docs__drawer {
+  inline-size: min(20rem, 85vw);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.mira-docs__drawer > [data-part~="dialog:close-trigger"] {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  margin-inline-end: var(--docs-space-2);
+}
+
+.mira-docs__drawer-title {
+  grid-row: 1;
+  grid-column: 1;
+  margin: 0;
+  padding: var(--docs-space-4) var(--docs-space-2) var(--docs-space-2) var(--docs-space-4);
+  font-size: var(--docs-text-base);
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__sidebar--drawer {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  position: static;
+  min-block-size: 0;
+  height: auto;
+  border-inline-end: none;
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------------- */
+/* See also — the pages a page points on to, at the end of the article        */
+/* ------------------------------------------------------------------------- */
+
+.mira-docs__see-also {
+  margin-block-start: var(--docs-space-6);
+  padding-block-start: var(--docs-space-4);
+  border-block-start: var(--docs-border-width-thin) solid var(--docs-border);
+}
+
+.mira-docs__see-also h2 {
+  margin-block: 0 var(--docs-space-3);
+  font-size: var(--docs-text-base);
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__see-also ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mira-docs__see-also li + li {
+  margin-block-start: var(--docs-space-3);
+}
+
+.mira-docs__see-also a {
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
+.mira-docs__see-also a:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__see-also p {
+  margin-block: var(--docs-space-1) 0;
+  font-size: var(--docs-text-sm);
+  color: var(--docs-muted);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Generated front page                                                       */
+/* ------------------------------------------------------------------------- */
+
+.mira-docs__home {
+  display: grid;
+  gap: var(--docs-space-8);
+}
+
+.mira-docs__home-group h2 {
+  margin-block: 0 var(--docs-space-3);
+  font-size: var(--docs-text-sm);
+  font-weight: var(--docs-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--docs-muted);
+}
+
+.mira-docs__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--docs-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mira-docs__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--docs-space-1);
+  height: 100%;
+  padding: var(--docs-space-4);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-elevated);
+  color: var(--docs-fg);
+  text-decoration: none;
+}
+
+.mira-docs__card:hover {
+  background: var(--docs-fill);
+}
+
+.mira-docs__card:focus-visible {
+  outline: var(--docs-focus-ring-width) solid var(--docs-focus-ring-color);
+  outline-offset: var(--docs-focus-ring-offset);
+}
+
+.mira-docs__card-title {
+  font-weight: var(--docs-font-weight-semibold);
+}
+
+.mira-docs__card-text {
+  font-size: var(--docs-text-sm);
+  color: var(--docs-muted);
+}

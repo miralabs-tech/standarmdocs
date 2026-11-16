@@ -1,0 +1,11 @@
+[
+  {
+    "name": "DisclosureProps",
+    "rows": [
+      { "name": "label", "type": "string", "notes": "The text of the button that opens the panel." },
+      { "name": "open?", "type": "boolean", "notes": "Controlled." },
+      { "name": "defaultOpen?", "type": "boolean" },
+      { "name": "onOpenChange?", "type": "((open: boolean) => void)", "notes": "Called with the next state." }
+    ]
+  }
+]

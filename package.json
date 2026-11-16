@@ -1,0 +1,20 @@
+{
+  "name": "standarmdocs",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '@standarx/mdocs' build",
+    "typecheck": "bun run --filter '@standarx/mdocs' typecheck",
+    "test": "bun run --filter '@standarx/mdocs' test",
+    "check:boundary": "bun packages/mdocs/scripts/check-core-boundary.ts",
+    "check:package": "bun scripts/check-package.ts",
+    "check:bundle": "bun run --filter '@standarx/mdocs' check:bundle"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "typescript": "^7.0.2"
+  }
+}

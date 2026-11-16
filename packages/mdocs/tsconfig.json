@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@standarx/mdocs": ["./src/index.ts"],
+      "@standarx/mdocs/ask": ["./src/core/ask-protocol.ts"],
+      "@standarx/mdocs/base": ["./src/core/base.ts"],
+      "@standarx/mdocs/config": ["./src/cli/config.ts"],
+      "@standarx/mdocs/search": ["./src/core/search.ts"],
+      "@standarx/mdocs/sidebar": ["./src/core/sidebar.ts"],
+      "@standarx/mdocs/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "tests", "scripts", "vitest.config.ts"],
+  "exclude": ["tests/fixtures/site/.mdocs", "tests/fixtures/site/dist"]
+}
