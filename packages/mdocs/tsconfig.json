@@ -26,5 +26,10 @@
     }
   },
   "include": ["src", "tests", "scripts", "vitest.config.ts"],
-  "exclude": ["tests/fixtures/site/.mdocs", "tests/fixtures/site/dist"]
+  "exclude": [
+    "tests/fixtures/site/.mdocs",
+    "tests/fixtures/site/dist",
+    "tests/fixtures/locales/.mdocs",
+    "tests/fixtures/locales/dist"
+  ]
 }

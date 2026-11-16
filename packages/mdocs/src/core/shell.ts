@@ -19,6 +19,8 @@ export interface ShellOptions {
   readonly head?: string;
   /** The path the site is served under, normalized. Written on `<html>` unless it is `/`. */
   readonly base?: string;
+  readonly lang?: string;
+  readonly alternates?: readonly { readonly hreflang: string; readonly href: string }[];
 }
 
 const ESCAPES: Readonly<Record<string, string>> = {
@@ -56,17 +58,47 @@ export function shell(body: string, options: ShellOptions): string {
     .map((href) => `\n    <link rel="stylesheet" href="${escapeAttribute(href)}" />`)
     .join("");
 
+  const alternates = (options.alternates ?? [])
+    .map(
+      (alternate) =>
+        `\n    <link rel="alternate" hreflang="${escapeAttribute(alternate.hreflang)}" href="${escapeAttribute(alternate.href)}" />`,
+    )
+    .join("");
+
   const head = options.head === undefined ? "" : `\n    ${options.head}`;
 
   return `<!doctype html>
-<html lang="en"${attributes}${based}>
+<html lang="${escapeAttribute(options.lang ?? "en")}"${attributes}${based}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeAttribute(options.title)}</title>${description}${links}${head}
+    <title>${escapeAttribute(options.title)}</title>${description}${links}${alternates}${head}
     <script type="module" src="${escapeAttribute(options.script)}"></script>
   </head>
   <body>${body}</body>
+</html>
+`;
+}
+
+export interface RedirectOptions {
+  readonly title: string;
+  readonly lang: string;
+  readonly href: string;
+  readonly text: string;
+}
+
+export function redirectPage(options: RedirectOptions): string {
+  const href = escapeAttribute(options.href);
+  return `<!doctype html>
+<html lang="${escapeAttribute(options.lang)}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeAttribute(options.title)}</title>
+    <meta http-equiv="refresh" content="0; url=${href}" />
+    <link rel="canonical" href="${href}" />
+  </head>
+  <body><a href="${href}">${escapeAttribute(options.text)}</a></body>
 </html>
 `;
 }

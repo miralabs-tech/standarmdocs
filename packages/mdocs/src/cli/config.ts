@@ -3,6 +3,8 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Axes, ChromeCategory, ContentRoot } from "../index";
 import { normalizeBase } from "../core/base";
+import type { Labels } from "../core/labels";
+import { assertLocales } from "../core/locales";
 
 export interface SiteConfig {
   /** Where the `.md` tree lives. Relative paths resolve against the config file. */
@@ -76,6 +78,8 @@ export interface SiteConfig {
    * markup; a script gets the document, like any other module.
    */
   readonly scripts?: readonly string[];
+  readonly locales?: readonly string[];
+  readonly labels?: Readonly<Record<string, Partial<Labels>>>;
 }
 
 export interface ResolvedConfig extends SiteConfig {
@@ -111,6 +115,7 @@ export async function loadConfig(cwd: string, version?: number): Promise<Resolve
   };
   const config = loaded.default;
   if (config === undefined) throw new Error(`${file} has no default export`);
+  if (config.locales !== undefined) assertLocales(config.locales);
 
   const root = dirname(file);
   const against = (path: string): string => (isAbsolute(path) ? path : resolve(root, path));

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { TOC } from "../../core/content/toc";
 import type { TocEntry } from "../../core/model";
+import { useLabels } from "../labels-context";
 
 /** A `##` and the `###` that follow it; a `###` before any `##` stands alone. */
 interface TocGroup {
@@ -49,19 +50,21 @@ function TocList({ toc }: { readonly toc: readonly TocEntry[] }): ReactNode {
  * marks both.
  */
 export function TocRail({ toc }: { readonly toc: readonly TocEntry[] }): ReactNode {
+  const labels = useLabels();
   return (
-    <nav className="docs-toc docs-toc--rail" aria-label="On this page" {...{ [TOC]: "" }}>
-      <p className="docs-toc__title">On this page</p>
+    <nav className="docs-toc docs-toc--rail" aria-label={labels.onThisPage} {...{ [TOC]: "" }}>
+      <p className="docs-toc__title">{labels.onThisPage}</p>
       <TocList toc={toc} />
     </nav>
   );
 }
 
 export function TocFold({ toc }: { readonly toc: readonly TocEntry[] }): ReactNode {
+  const labels = useLabels();
   return (
-    <nav className="docs-toc docs-toc--fold" aria-label="On this page" {...{ [TOC]: "" }}>
+    <nav className="docs-toc docs-toc--fold" aria-label={labels.onThisPage} {...{ [TOC]: "" }}>
       <details>
-        <summary>On this page</summary>
+        <summary>{labels.onThisPage}</summary>
         <TocList toc={toc} />
       </details>
     </nav>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { withBase } from "../../core/base";
 import type { SeeAlsoLink } from "../../core/model";
+import { useLabels } from "../labels-context";
 
 export function SeeAlso({
   links,
@@ -9,9 +10,10 @@ export function SeeAlso({
   readonly links: readonly SeeAlsoLink[];
   readonly base?: string;
 }): ReactNode {
+  const labels = useLabels();
   return (
     <section className="mira-docs__see-also" aria-labelledby="mira-see-also">
-      <h2 id="mira-see-also">See also</h2>
+      <h2 id="mira-see-also">{labels.seeAlso}</h2>
       <ul>
         {links.map((link) => (
           <li key={link.route}>

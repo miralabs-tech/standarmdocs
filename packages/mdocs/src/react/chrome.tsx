@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { type Axes, type AxisControl, axisControlsFor, DEFAULT_MATRIX } from "../core/axes";
 import { withBase } from "../core/base";
+import type { Labels } from "../core/labels";
 import { SEARCH_MOUNT } from "../core/search";
 import {
   NAV_BAR,
@@ -9,6 +10,7 @@ import {
   SIDEBAR_CATEGORY,
   sidebarBootScript,
 } from "../core/sidebar";
+import { useLabels } from "./labels-context";
 
 export interface ChromeCategory {
   readonly slug: string;
@@ -41,6 +43,14 @@ export interface ChromeProps {
   readonly base?: string;
   /** The site's effective matrix, which decides the axis controls shown. Absent, `DEFAULT_MATRIX`. */
   readonly matrix?: readonly Axes[];
+  readonly languages?: readonly ChromeLanguage[];
+}
+
+export interface ChromeLanguage {
+  readonly locale: string;
+  readonly label: string;
+  readonly href: string;
+  readonly current: boolean;
 }
 
 interface Placement {
@@ -113,6 +123,19 @@ function Link({
   );
 }
 
+const AXIS_LABEL: Readonly<Record<AxisControl["axis"], keyof Labels>> = {
+  theme: "theme",
+  density: "density",
+};
+
+const VALUE_LABEL: Readonly<Record<string, keyof Labels>> = {
+  "": "auto",
+  light: "light",
+  dark: "dark",
+  desktop: "desktop",
+  touch: "touch",
+};
+
 /**
  * The axis switch, as markup that does nothing until a script says otherwise.
  *
@@ -133,10 +156,16 @@ function Link({
  * put the whole chrome behind a hydration boundary to win nothing.
  */
 function AxisControls({ controls }: { readonly controls: readonly AxisControl[] }): ReactNode {
+  const labels = useLabels();
   return (
     <div className="mira-docs__axes" data-mira-axes>
       {controls.map((control) => (
-        <div key={control.axis} className="mira-docs__axis" role="group" aria-label={control.label}>
+        <div
+          key={control.axis}
+          className="mira-docs__axis"
+          role="group"
+          aria-label={labels[AXIS_LABEL[control.axis]]}
+        >
           {control.values.map((value) => (
             <button
               key={value.value}
@@ -145,7 +174,7 @@ function AxisControls({ controls }: { readonly controls: readonly AxisControl[] 
               data-mira-axis-value={value.value}
               aria-pressed={value.value === "" ? "true" : "false"}
             >
-              {value.label}
+              {labels[VALUE_LABEL[value.value] ?? "auto"]}
             </button>
           ))}
         </div>
@@ -191,8 +220,10 @@ export function StaticChrome({
   degraded,
   base = "/",
   matrix,
+  languages,
 }: ChromeProps): ReactNode {
   const { lead, sections } = placeEntries(categories, entries);
+  const labels = useLabels();
 
   return (
     <div className="mira-docs__sidebar">
@@ -203,7 +234,25 @@ export function StaticChrome({
       )}
       <div className="mira-docs__search" {...{ [SEARCH_MOUNT]: "" }} />
       <AxisControls controls={axisControlsFor(matrix ?? DEFAULT_MATRIX)} />
-      <nav aria-label="Documentation">
+      {languages === undefined || languages.length < 2 ? null : (
+        <nav className="mira-docs__languages" aria-label={labels.language}>
+          <ul>
+            {languages.map((language) => (
+              <li key={language.locale}>
+                <a
+                  href={language.href}
+                  hrefLang={language.locale}
+                  lang={language.locale}
+                  {...(language.current ? { "aria-current": "page" } : {})}
+                >
+                  {language.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <nav aria-label={labels.documentation}>
         {lead.length === 0 ? null : (
           <ul className="mira-docs__lead">
             {lead.map((entry) => (

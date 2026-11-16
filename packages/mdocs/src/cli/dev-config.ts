@@ -96,15 +96,18 @@ export async function planDev(
   const override: readonly ContentRoot[] | undefined =
     specs.length === 0 ? undefined : specs.map((spec) => mounted(cwd, spec));
 
-  const withContent = (config: ResolvedConfig): ResolvedConfig =>
-    override === undefined
-      ? config
-      : {
-          ...config,
-          contentDir: override[0]?.dir ?? config.contentDir,
-          contentRoots: override,
-          categories: categoriesFor(override, config.categories),
-        };
+  const withContent = (config: ResolvedConfig): ResolvedConfig => {
+    if (override === undefined) return config;
+    if (config.locales !== undefined) {
+      throw new Error("--root cannot be combined with `locales` in mdocs.config.ts: remove one of them");
+    }
+    return {
+      ...config,
+      contentDir: override[0]?.dir ?? config.contentDir,
+      contentRoots: override,
+      categories: categoriesFor(override, config.categories),
+    };
+  };
 
   if (hasConfig) {
     let current = withContent(await loadConfig(cwd));
