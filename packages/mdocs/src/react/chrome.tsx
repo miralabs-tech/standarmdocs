@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AXIS_CONTROLS } from "../core/axes";
+import { type Axes, type AxisControl, axisControlsFor, DEFAULT_MATRIX } from "../core/axes";
 import { withBase } from "../core/base";
 import { SEARCH_MOUNT } from "../core/search";
 import {
@@ -39,6 +39,8 @@ export interface ChromeProps {
   readonly siteName?: string;
   /** The path the site is served under, normalized. Absent, `/`. */
   readonly base?: string;
+  /** The site's effective matrix, which decides the axis controls shown. Absent, `DEFAULT_MATRIX`. */
+  readonly matrix?: readonly Axes[];
 }
 
 interface Placement {
@@ -130,10 +132,10 @@ function Link({
  * works before any script arrives, and handing this one control to React would
  * put the whole chrome behind a hydration boundary to win nothing.
  */
-function AxisControls(): ReactNode {
+function AxisControls({ controls }: { readonly controls: readonly AxisControl[] }): ReactNode {
   return (
     <div className="mira-docs__axes" data-mira-axes>
-      {AXIS_CONTROLS.map((control) => (
+      {controls.map((control) => (
         <div key={control.axis} className="mira-docs__axis" role="group" aria-label={control.label}>
           {control.values.map((value) => (
             <button
@@ -188,6 +190,7 @@ export function StaticChrome({
   current,
   degraded,
   base = "/",
+  matrix,
 }: ChromeProps): ReactNode {
   const { lead, sections } = placeEntries(categories, entries);
 
@@ -199,7 +202,7 @@ export function StaticChrome({
         </p>
       )}
       <div className="mira-docs__search" {...{ [SEARCH_MOUNT]: "" }} />
-      <AxisControls />
+      <AxisControls controls={axisControlsFor(matrix ?? DEFAULT_MATRIX)} />
       <nav aria-label="Documentation">
         {lead.length === 0 ? null : (
           <ul className="mira-docs__lead">

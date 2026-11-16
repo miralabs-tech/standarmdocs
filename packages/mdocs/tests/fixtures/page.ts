@@ -1,7 +1,7 @@
 // Deep imports, not the barrel: the barrel is the build entry point and reaches
 // `node:fs`, which a browser test cannot import. The rule the generated client
 // entry follows, followed here too.
-import { DEFAULT_MATRIX } from "../../src/core/axes";
+import { MIRALABS_MATRIX } from "../../src/core/axes";
 import type { ApiTables, PageModel } from "../../src/core/model";
 import type { ChromeProps } from "../../src/react/chrome";
 import type { DemoRegistry } from "../../src/react/registry";
@@ -27,9 +27,9 @@ export const MODEL: PageModel = {
   segments: [
     { kind: "html", html: "<p>A button and the region it controls.</p>" },
     // The matrix belongs to this fence and not to the site: `disclosure-basic` earns
-    // four copies by being the axis demonstration, and the other two would only
-    // cost hydration time. A single entry is still a matrix.
-    { kind: "demo", id: "disclosure-basic", matrix: DEFAULT_MATRIX },
+    // the four `MIRALABS_MATRIX` copies by being the axis demonstration, and the
+    // other two would only cost hydration time. A single entry is still a matrix.
+    { kind: "demo", id: "disclosure-basic", matrix: MIRALABS_MATRIX },
     { kind: "demo", id: "counter-basic", matrix: [{}] },
     { kind: "demo", id: "portal-basic", matrix: [{}] },
     { kind: "props", name: "disclosure" },

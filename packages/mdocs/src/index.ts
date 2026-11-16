@@ -19,9 +19,11 @@ export {
   type AxisControl,
   axisAttributes,
   axisBootScript,
+  axisControlsFor,
   axisKey,
   axisStorageKey,
   DEFAULT_MATRIX,
+  MIRALABS_MATRIX,
 } from "./core/axes";
 export {
   type AskBlock,

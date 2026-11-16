@@ -10,6 +10,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { axisControlsFor, MIRALABS_MATRIX } from "../src/core/axes";
 import { orderEntries, SIDEBAR_CLOSED_KEY, SIDEBAR_SCROLL_KEY } from "../src/core/sidebar";
 import {
   type ChromeEntry,
@@ -143,6 +144,35 @@ describe("page order inside a category", () => {
       "limits",
       "registries",
     ]);
+  });
+});
+
+describe("the axis controls", () => {
+  const axes = (matrix: Parameters<typeof axisControlsFor>[0]): string[] =>
+    axisControlsFor(matrix).map((control) => control.axis);
+
+  it("offers theme alone for a matrix of one auto entry", () => {
+    expect(axes([{}])).toEqual(["theme"]);
+  });
+
+  it("adds density when an entry sets it", () => {
+    expect(axes(MIRALABS_MATRIX)).toEqual(["theme", "density"]);
+  });
+
+  it("does not add a control for an axis that has none", () => {
+    expect(axes([{ motion: "reduced" }])).toEqual(["theme"]);
+  });
+
+  it("renders no density button with the default matrix", () => {
+    const html = render();
+    expect(html).toContain('data-mira-axis="theme"');
+    expect(html).not.toContain('data-mira-axis="density"');
+  });
+
+  it("renders the density buttons when the matrix sets density", () => {
+    const html = render({ matrix: MIRALABS_MATRIX });
+    expect(html).toContain('data-mira-axis="theme"');
+    expect(html).toContain('data-mira-axis="density"');
   });
 });
 

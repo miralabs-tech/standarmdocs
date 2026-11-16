@@ -51,11 +51,17 @@ export function axisKey(axes: Axes): string {
 }
 
 /**
- * The matrix one demo is rendered over when a site names none. Four entries so
- * all four axes are exercised, and the first is every axis on auto — the case a
- * format that modelled "auto" as a value could not express at all.
+ * The matrix one demo is rendered over when a site names none: one render, every
+ * axis on auto — the case a format that modelled "auto" as a value could not
+ * express at all. A site that wants variants declares `matrix` itself.
  */
-export const DEFAULT_MATRIX: readonly Axes[] = [
+export const DEFAULT_MATRIX: readonly Axes[] = [{}];
+
+/**
+ * The matrix the MiraLabs UI sites declare. Four entries so all four axes are
+ * exercised, and the first is every axis on auto.
+ */
+export const MIRALABS_MATRIX: readonly Axes[] = [
   {},
   { theme: "light" },
   { density: "touch" },
@@ -109,6 +115,18 @@ export const AXIS_CONTROLS: readonly AxisControl[] = [
     ],
   },
 ];
+
+/**
+ * The controls a site's page offers: theme always, and every other axis only when
+ * some entry of the site's matrix sets it, since a switch for an axis no demo
+ * varies would change nothing a reader could see.
+ */
+export function axisControlsFor(matrix: readonly Axes[]): readonly AxisControl[] {
+  return AXIS_CONTROLS.filter(
+    (control) =>
+      control.axis === "theme" || matrix.some((axes) => axes[control.axis] !== undefined),
+  );
+}
 
 /** One reader's choice for one axis, in their browser and nowhere else. */
 export function axisStorageKey(axis: AxisControl["axis"]): string {
