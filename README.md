@@ -4,7 +4,7 @@
 
 > "Markdown documentation sites with live React demos, prerendered to static HTML."
 
-[Quickstart](#-quickstart) · [Install](#-install) · [Features](#-features) · [Configuration](#-configuration-reference) · [CLI](#-cli-reference) · [Limits](#-limits) · [Changelog](./CHANGELOG.md)
+[Quickstart](#-quickstart) · [Install](#-install) · [Features](#-features) · [Configuration](#-configuration-reference) · [CLI](#-cli-reference) · [Deploy](#-deploy-to-github-pages) · [Limits](#-limits) · [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -201,6 +201,27 @@ Two roots that claim the same route, or one inside another, are an error naming 
 - `assets/`: the bundled client script, the chunks of the demos and the stylesheets.
 
 Links are root-relative and prefixed by `base` when the site has one.
+
+---
+
+## 🌐 Deploy to GitHub Pages
+
+A project site is served under the repository's name, `https://<owner>.github.io/<repository>/`, so its build needs that `base`:
+
+```ts
+// mdocs.config.ts
+export default defineConfig({
+  // …
+  base: "/my-repo/",
+});
+```
+
+1. List `react` and `react-dom` in the site's own `dependencies`. The package declares them as optional peers and never installs a copy of its own, so a site that links its library with `file:` keeps a single React.
+2. Leave `--chrome` on its default, `auto`: without the interactive package the site gets the static chrome, with no banner.
+3. Declare the matrix your demos need. A site without the axes of the default matrix renders each demo once with `matrix: [{}]`, or over its own entries, such as `matrix: [{}, { theme: "dark" }]`.
+4. Copy [`examples/github-pages.yml`](./examples/github-pages.yml) to `.github/workflows/pages.yml`, set `working-directory` and the artifact `path` to the site's folder, and set **Settings > Pages > Source** to **GitHub Actions**.
+
+The workflow runs on every published release and by hand (`workflow_dispatch`). It installs with `bun install --frozen-lockfile`, runs `mdocs build --base=/<repository>/`, uploads `dist` with `actions/upload-pages-artifact` and publishes it with `actions/deploy-pages`. It needs the `pages: write` and `id-token: write` permissions, which it declares. No `gh-pages` branch is involved.
 
 ---
 
