@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { renderInline } from "../../core/content/markdown";
 import type { ApiRow, ApiTable } from "../../core/model";
+import { useLabels } from "../labels-context";
 
 /** A run of consecutive rows the generator gave the same heading, or none. */
 interface RowRun {
@@ -49,6 +50,7 @@ function rowRuns(rows: readonly ApiRow[]): readonly RowRun[] {
  * never that they belong to the one below them.
  */
 export function PropsTable({ table }: { readonly table: ApiTable }): ReactNode {
+  const labels = useLabels();
   // `== null`, not `=== undefined`: these tables arrive through `JSON.parse`,
   // which cannot produce `undefined`. A generator that omits the key gives one, a
   // generator that writes it out gives the other, and both mean absent.
@@ -68,9 +70,9 @@ export function PropsTable({ table }: { readonly table: ApiTable }): ReactNode {
       {empty ? null : (
         <thead>
           <tr>
-            <th scope="col">Prop</th>
-            <th scope="col">Type</th>
-            <th scope="col">Notes</th>
+            <th scope="col">{labels.prop}</th>
+            <th scope="col">{labels.type}</th>
+            <th scope="col">{labels.notes}</th>
           </tr>
         </thead>
       )}

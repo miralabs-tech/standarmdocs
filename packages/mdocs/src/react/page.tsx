@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import { type Labels, LABELS } from "../core/labels";
 import type { ApiTables, PageModel, Segment } from "../core/model";
 import { type ChromeProps, NavBar, StaticChrome } from "./chrome";
 import { AskFence } from "./fences/ask";
@@ -10,6 +11,7 @@ import { SeeAlso } from "./fences/see-also";
 import { TabsFence } from "./fences/tabs";
 import { TocFold, TocRail } from "./fences/toc";
 import { islandSlot } from "./island";
+import { LabelsContext } from "./labels-context";
 
 export interface PageProps {
   readonly model: PageModel;
@@ -20,9 +22,10 @@ export interface PageProps {
   readonly islands?: Readonly<Record<string, string>>;
   /** Demo id → that demo's own file, coloured at build time. */
   readonly sources?: Readonly<Record<string, string>>;
+  readonly labels?: Labels;
 }
 
-export function Page({ model, chrome, demos, api, islands, sources }: PageProps): ReactNode {
+export function Page({ model, chrome, demos, api, islands, sources, labels }: PageProps): ReactNode {
   // Named and recursive rather than inlined, because a tab panel holds segments
   // and not HTML: the ```props fence at the end of a component page has to
   // render inside its panel, through the same branch that renders it outside one.
@@ -97,18 +100,20 @@ export function Page({ model, chrome, demos, api, islands, sources }: PageProps)
   const toc = model.toc.length >= 2 ? model.toc : null;
 
   return (
-    <div className={toc === null ? "mira-docs" : "mira-docs mira-docs--toc"}>
-      <NavBar siteName={chrome.siteName} />
-      <StaticChrome {...chrome} />
-      <main className="mira-docs__main">
-        <h1>{model.title}</h1>
-        {toc === null ? null : <TocFold toc={toc} />}
-        {renderSegments(model.segments)}
-        {model.seeAlso === undefined || model.seeAlso.length === 0 ? null : (
-          <SeeAlso links={model.seeAlso} base={chrome.base ?? "/"} />
-        )}
-      </main>
-      {toc === null ? null : <TocRail toc={toc} />}
-    </div>
+    <LabelsContext value={labels ?? LABELS.en}>
+      <div className={toc === null ? "mira-docs" : "mira-docs mira-docs--toc"}>
+        <NavBar siteName={chrome.siteName} />
+        <StaticChrome {...chrome} />
+        <main className="mira-docs__main">
+          <h1>{model.title}</h1>
+          {toc === null ? null : <TocFold toc={toc} />}
+          {renderSegments(model.segments)}
+          {model.seeAlso === undefined || model.seeAlso.length === 0 ? null : (
+            <SeeAlso links={model.seeAlso} base={chrome.base ?? "/"} />
+          )}
+        </main>
+        {toc === null ? null : <TocRail toc={toc} />}
+      </div>
+    </LabelsContext>
   );
 }

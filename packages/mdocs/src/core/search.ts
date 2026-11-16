@@ -19,6 +19,10 @@ import type { ApiTables, PageModel, Segment } from "./model";
 /** The file the build writes at the top of the output. */
 export const SEARCH_INDEX_FILE = "search-index.json";
 
+export function searchIndexFile(locale?: string): string {
+  return locale === undefined ? SEARCH_INDEX_FILE : `search-index.${locale}.json`;
+}
+
 /** Where a page fetches it from. */
 export const SEARCH_INDEX_URL = `/${SEARCH_INDEX_FILE}`;
 

@@ -103,14 +103,23 @@ export {
   type TocEntry,
   withoutAsks,
 } from "./core/model";
+export { type Labels, LABELS, labelsFor, localeName } from "./core/labels";
+export { assertLocales, localeRoute } from "./core/locales";
 export {
   SEARCH_INDEX_FILE,
   type SearchDocument,
   type SearchIndex,
   searchIndex,
+  searchIndexFile,
   type SearchOptions,
 } from "./core/search";
-export { escapeAttribute, shell, type ShellOptions } from "./core/shell";
+export {
+  escapeAttribute,
+  type RedirectOptions,
+  redirectPage,
+  shell,
+  type ShellOptions,
+} from "./core/shell";
 export {
   SIDEBAR_BOOT_BODY,
   SIDEBAR_CATEGORY,
@@ -121,6 +130,7 @@ export {
 export {
   type ChromeCategory,
   type ChromeEntry,
+  type ChromeLanguage,
   type ChromeProps,
   placeEntries,
   StaticChrome,
@@ -134,6 +144,7 @@ export {
   type IslandProps,
   islandSlot,
 } from "./react/island";
+export { LabelsContext, useLabels } from "./react/labels-context";
 export { Page, type PageProps } from "./react/page";
 export { renderPage, type RenderPageOptions } from "./react/prerender";
 export {

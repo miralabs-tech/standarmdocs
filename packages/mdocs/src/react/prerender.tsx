@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from "react";
 import { prerender } from "react-dom/static";
+import type { Labels } from "../core/labels";
 import { type ApiTables, demoIds, type PageModel } from "../core/model";
 import type { ChromeProps } from "./chrome";
 import { islandPrefix, islandSlot } from "./island";
@@ -28,6 +29,7 @@ export interface RenderPageOptions {
   readonly api: ApiTables;
   /** Demo id → that demo's own file, coloured at build time. */
   readonly sources?: Readonly<Record<string, string>>;
+  readonly labels?: Labels;
   /**
    * `false` renders every island inside the page's own tree instead of giving it
    * a root of its own — the naive shape, whose `useId` values cannot survive
@@ -42,10 +44,13 @@ export interface RenderPageOptions {
  * the document around it.
  */
 export async function renderPage(options: RenderPageOptions): Promise<string> {
-  const { model, chrome, registry, api, sources } = options;
+  const { model, chrome, registry, api, sources, labels } = options;
   const perIslandRoot = options.perIslandRoot ?? true;
   const demos = await loadDemos(registry, demoIds(model));
-  const extra = sources === undefined ? {} : { sources };
+  const extra = {
+    ...(sources === undefined ? {} : { sources }),
+    ...(labels === undefined ? {} : { labels }),
+  };
 
   if (!perIslandRoot) {
     return await toHtml(<Page model={model} chrome={chrome} demos={demos} api={api} {...extra} />);

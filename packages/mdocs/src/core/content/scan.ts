@@ -24,6 +24,7 @@ export interface ContentRoot {
   readonly prefix: string;
   /** The name of the `.md` file when the root is that one file and not a tree. */
   readonly file?: string | undefined;
+  readonly locale?: boolean | undefined;
 }
 
 /**
@@ -231,7 +232,10 @@ function sourcesOf(root: ContentRoot): Source[] {
     .map((file) => {
       const inRoot = relative(root.dir, file).split(sep).join(posix.sep);
       const rel = root.prefix === "" ? inRoot : `${root.prefix}/${inRoot}`;
-      return toSource(file, rel, place(rel));
+      if (root.locale !== true) return toSource(file, rel, place(rel));
+      const inside = place(inRoot);
+      const route = inside.route === "/" ? `/${root.prefix}` : `/${root.prefix}${inside.route}`;
+      return toSource(file, rel, { route, group: inside.group });
     });
 }
 

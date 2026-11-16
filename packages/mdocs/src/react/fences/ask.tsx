@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ASK_ISLAND, askIslandValue } from "../../core/ask-protocol";
 import type { AskBlock } from "../../core/content/ask";
+import { useLabels } from "../labels-context";
 
 /**
  * What an ```ask fence becomes: the question and its answer as static, read-only
@@ -23,6 +24,7 @@ export function AskFence({
   readonly file: string | undefined;
   readonly hash: string | undefined;
 }): ReactNode {
+  const labels = useLabels();
   const shown = block.kind === "yesno" ? ["yes", "no"] : block.options;
   const chosen = new Set(
     typeof block.answer === "string" ? [block.answer] : (block.answer ?? []),
@@ -37,7 +39,7 @@ export function AskFence({
         ? {}
         : { [ASK_ISLAND]: askIslandValue({ block, file, hash }) })}
     >
-      <p className="mira-ask__state">{block.answered ? "Answered" : "Pending"}</p>
+      <p className="mira-ask__state">{block.answered ? labels.answered : labels.pending}</p>
       <p className="mira-ask__question">{block.question}</p>
       {shown.length === 0 ? null : (
         <ul className="mira-ask__options">

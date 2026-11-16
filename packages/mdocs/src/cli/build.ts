@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  statSync,
 } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -12,25 +13,34 @@ import {
   type ApiTable,
   type ApiTables,
   axisBootScript,
+  assertLocales,
   type ChromeEntry,
+  type ChromeLanguage,
+  type ChromeProps,
   createHighlight,
   DEFAULT_MATRIX,
   type DemoRegistry,
   demoIds,
   type Highlight,
+  type Labels,
+  labelsFor,
   llmsFull,
   llmsTxt,
+  localeName,
+  localeRoute,
   normalizeBase,
   type PageModel,
   pageMarkdown,
   placeEntries,
   PRIVATE_DIR,
+  redirectPage,
   renderPage,
   resolveRelated,
   scanContent,
-  SEARCH_INDEX_FILE,
   searchIndex,
+  searchIndexFile,
   shell,
+  type ShellOptions,
   withBase,
   withoutAsks,
 } from "../index";
@@ -312,6 +322,67 @@ export async function build(config: ResolvedConfig, options: BuildOptions): Prom
   }
 }
 
+interface LocaleSite {
+  readonly locale: string | undefined;
+  readonly labels: Labels;
+  readonly pages: readonly PageModel[];
+  readonly entries: readonly ChromeEntry[];
+  readonly placement: ReturnType<typeof placeEntries>;
+  readonly home: string;
+}
+
+function localesOf(config: ResolvedConfig): readonly string[] | undefined {
+  if (config.locales === undefined) return undefined;
+  assertLocales(config.locales);
+  for (const locale of config.locales) {
+    const dir = join(config.contentDir, locale);
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+      throw new Error(`locale "${locale}" has no content folder: expected ${dir}`);
+    }
+  }
+  return config.locales;
+}
+
+function hrefOf(base: string, locale: string, route: string): string {
+  return withBase(base, route === `/${locale}` ? `/${locale}/` : route);
+}
+
+function languagesFor(
+  locales: readonly string[],
+  config: ResolvedConfig,
+  routes: ReadonlyMap<string, ReadonlySet<string>>,
+  base: string,
+  from: string,
+  route: string,
+): readonly ChromeLanguage[] {
+  return locales.map((locale) => {
+    const target = localeRoute(route, from, locale);
+    const exists = routes.get(locale)?.has(target) === true;
+    return {
+      locale,
+      label: localeName(locale, config.labels?.[locale]),
+      href: exists ? hrefOf(base, locale, target) : withBase(base, `/${locale}/`),
+      current: locale === from,
+    };
+  });
+}
+
+function alternatesFor(
+  locales: readonly string[],
+  routes: ReadonlyMap<string, ReadonlySet<string>>,
+  base: string,
+  from: string,
+  route: string,
+): readonly { readonly hreflang: string; readonly href: string }[] {
+  const found = locales.flatMap((locale) => {
+    const target = localeRoute(route, from, locale);
+    return routes.get(locale)?.has(target) === true
+      ? [{ hreflang: locale, href: hrefOf(base, locale, target) }]
+      : [];
+  });
+  return found.length > 1 ? found : [];
+}
+
 async function buildWith(
   config: ResolvedConfig,
   options: BuildOptions,
@@ -336,24 +407,36 @@ async function buildWith(
   const asks = options.asks ?? "drop";
   const ui = options.chrome === "static" ? null : resolveUi(config.root);
   const asksLive = ui !== null && asks === "island";
+  const locales = localesOf(config);
 
-  const scanned = scanContent({
-    ...(config.contentRoots === undefined
-      ? { contentDir: config.contentDir }
-      : { roots: config.contentRoots }),
-    matrix: config.matrix,
-    highlight,
-    tabs: config.tabs,
-    headingSlugs: config.headingSlugs,
-    base,
-    askPositions: asksLive,
-    links: options.mode === "development" ? "warn" : "error",
-  });
-  const related = resolveRelated(scanned, options.mode === "development" ? "warn" : "error");
-  const pages = asks === "drop" ? related.map(withoutAsks) : related;
-  if (pages.length === 0) throw new Error(`no .md pages under ${config.contentDir}`);
+  const scan = (locale: string | undefined): readonly PageModel[] => {
+    const where =
+      locale !== undefined
+        ? { roots: [{ dir: join(config.contentDir, locale), prefix: locale, locale: true }] }
+        : config.contentRoots === undefined
+          ? { contentDir: config.contentDir }
+          : { roots: config.contentRoots };
+    const scanned = scanContent({
+      ...where,
+      matrix: config.matrix,
+      highlight,
+      tabs: config.tabs,
+      headingSlugs: config.headingSlugs,
+      base,
+      askPositions: asksLive,
+      links: options.mode === "development" ? "warn" : "error",
+    });
+    const related = resolveRelated(scanned, options.mode === "development" ? "warn" : "error");
+    const found = asks === "drop" ? related.map(withoutAsks) : related;
+    if (found.length === 0) {
+      const under = locale === undefined ? config.contentDir : join(config.contentDir, locale);
+      throw new Error(`no .md pages under ${under}`);
+    }
+    return found;
+  };
+  const scanned = (locales ?? [undefined]).map((locale) => ({ locale, pages: scan(locale) }));
 
-  const ids = [...new Set(pages.flatMap((page) => demoIds(page)))];
+  const ids = [...new Set(scanned.flatMap(({ pages }) => pages.flatMap((page) => demoIds(page))))];
   const generated = generate(config.root, config.demosDir, ids, config.scripts ?? [], {
     ...(ui === null ? {} : { ui: ui.entry }),
     asks: asksLive,
@@ -411,108 +494,165 @@ async function buildWith(
   );
   const degraded = chromeState(options.chrome, ui);
   const matrix = config.matrix ?? DEFAULT_MATRIX;
-  const entries: readonly ChromeEntry[] = pages.map((page) => ({
-    route: page.route,
-    title: page.title,
-    group: page.group,
-    description: page.description,
-    order: page.order,
-  }));
 
-  // Once, before anything is written: a group with no category is a config that
-  // is missing an entry, and every page of that group would render with a sidebar
-  // that does not list it. Called here as well as from the chrome so the build
-  // fails before it has emitted forty pages that are each individually wrong.
-  const placement = placeEntries(config.categories, entries);
-  const files = new Map(
-    pages.flatMap((page): [string, string][] =>
-      page.origin === undefined
+  // Once per locale, before anything is written: a group with no category is a
+  // config that is missing an entry, and every page of that group would render
+  // with a sidebar that does not list it. Called here as well as from the chrome
+  // so the build fails before it has emitted forty pages that are each
+  // individually wrong.
+  const sites: readonly LocaleSite[] = scanned.map(({ locale, pages }) => {
+    const entries: readonly ChromeEntry[] = pages.map((page) => ({
+      route: page.route,
+      title: page.title,
+      group: page.group,
+      description: page.description,
+      order: page.order,
+    }));
+    return {
+      locale,
+      labels: labelsFor(locale ?? "en", config.labels?.[locale ?? "en"]),
+      pages,
+      entries,
+      placement: placeEntries(config.categories, entries),
+      home: locale === undefined ? "/" : `/${locale}`,
+    };
+  });
+  const routes = new Map(
+    sites.flatMap((site): [string, ReadonlySet<string>][] =>
+      site.locale === undefined
         ? []
-        : [
-            [posixPath(page.origin.path), page.route],
-            [posixPath(realpathOf(page.origin.path)), page.route],
-          ],
+        : [[site.locale, new Set([site.home, ...site.pages.map((page) => page.route)])]],
     ),
   );
 
   const head = `<script>${axisBootScript()}</script>`;
-  const markdown = new Map<string, string>();
 
-  for (const page of pages) {
-    const body = await renderPage({
-      model: page,
-      chrome: {
-        categories: config.categories,
-        entries,
-        current: page.route,
-        degraded,
-        base,
-        matrix,
-        ...(config.siteName === undefined ? {} : { siteName: config.siteName }),
-      },
-      registry: registry.DEMOS,
-      api,
-      sources,
-    });
-    const html = shell(body, {
-      title: config.siteName === undefined ? page.title : `${page.title} — ${config.siteName}`,
-      description: page.description,
-      script,
-      stylesheets,
-      head,
-      base,
-    });
-    const file = join(config.outDir, page.route.replace(/^\//, ""), "index.html");
-    mkdirSync(dirname(file), { recursive: true });
-    await Bun.write(file, html);
-
-    const text = pageMarkdown(
-      readSource(config, page),
-      page.origin === undefined ? page : { ...page, file: posixPath(realpathOf(page.origin.path)) },
-      { api, entries, files, base },
+  for (const [position, { locale, labels, pages, entries, placement, home }] of sites.entries()) {
+    const files = new Map(
+      pages.flatMap((page): [string, string][] =>
+        page.origin === undefined
+          ? []
+          : [
+              [posixPath(page.origin.path), page.route],
+              [posixPath(realpathOf(page.origin.path)), page.route],
+            ],
+      ),
     );
-    markdown.set(page.route, text);
-    await Bun.write(join(dirname(file), "index.md"), text);
+    const markdown = new Map<string, string>();
+    const chromeOf = (route: string): ChromeProps => ({
+      categories: config.categories,
+      entries,
+      current: route,
+      degraded,
+      base,
+      matrix,
+      ...(config.siteName === undefined ? {} : { siteName: config.siteName }),
+      ...(locales === undefined || locales.length < 2 || locale === undefined
+        ? {}
+        : { languages: languagesFor(locales, config, routes, base, locale, route) }),
+    });
+    const shellOf = (route: string): Pick<ShellOptions, "lang" | "alternates"> =>
+      locales === undefined || locale === undefined
+        ? {}
+        : { lang: locale, alternates: alternatesFor(locales, routes, base, locale, route) };
+
+    for (const page of pages) {
+      const body = await renderPage({
+        model: page,
+        chrome: chromeOf(page.route),
+        registry: registry.DEMOS,
+        api,
+        sources,
+        labels,
+      });
+      const html = shell(body, {
+        title: config.siteName === undefined ? page.title : `${page.title} — ${config.siteName}`,
+        description: page.description,
+        script,
+        stylesheets,
+        head,
+        base,
+        ...shellOf(page.route),
+      });
+      const file = join(config.outDir, page.route.replace(/^\//, ""), "index.html");
+      mkdirSync(dirname(file), { recursive: true });
+      await Bun.write(file, html);
+
+      const text = pageMarkdown(
+        readSource(config, page),
+        page.origin === undefined ? page : { ...page, file: posixPath(realpathOf(page.origin.path)) },
+        { api, entries, files, base },
+      );
+      markdown.set(page.route, text);
+      await Bun.write(join(dirname(file), "index.md"), text);
+    }
+
+    const site = { name: config.siteName ?? labels.documentation, base };
+    if (!pages.some((page) => page.route === home)) {
+      const model: PageModel = {
+        route: home,
+        title: site.name,
+        description: undefined,
+        group: undefined,
+        segments: [{ kind: "home" }],
+        toc: [],
+        related: [],
+      };
+      const body = await renderPage({
+        model,
+        chrome: chromeOf(home),
+        registry: registry.DEMOS,
+        api,
+        sources,
+        labels,
+      });
+      const file = join(config.outDir, home.replace(/^\//, ""), "index.html");
+      mkdirSync(dirname(file), { recursive: true });
+      await Bun.write(
+        file,
+        shell(body, {
+          title: site.name,
+          description: undefined,
+          script,
+          stylesheets,
+          head,
+          base,
+          ...shellOf(home),
+        }),
+      );
+    }
+
+    const llms = llmsTxt(site, placement);
+    const full = llmsFull(placement, markdown, base);
+    const index = ui === null ? undefined : JSON.stringify(searchIndex(pages, { api }));
+    const targets = [join(config.outDir, locale ?? "")];
+    if (locale !== undefined && position === 0) targets.push(config.outDir);
+    for (const dir of targets) {
+      await Bun.write(join(dir, "llms.txt"), llms);
+      await Bun.write(join(dir, "llms-full.txt"), full);
+    }
+    if (index !== undefined) {
+      await Bun.write(join(config.outDir, searchIndexFile(locale)), index);
+      if (locale !== undefined && position === 0) {
+        await Bun.write(join(config.outDir, searchIndexFile()), index);
+      }
+    }
   }
 
-  const site = { name: config.siteName ?? "Documentation", base };
-  if (!pages.some((page) => page.route === "/")) {
-    const home: PageModel = {
-      route: "/",
-      title: site.name,
-      description: undefined,
-      group: undefined,
-      segments: [{ kind: "home" }],
-      toc: [],
-      related: [],
-    };
-    const body = await renderPage({
-      model: home,
-      chrome: {
-        categories: config.categories,
-        entries,
-        current: "/",
-        degraded,
-        base,
-        matrix,
-        ...(config.siteName === undefined ? {} : { siteName: config.siteName }),
-      },
-      registry: registry.DEMOS,
-      api,
-      sources,
-    });
+  const lead = sites[0];
+  if (locales !== undefined && lead?.locale !== undefined) {
     await Bun.write(
       join(config.outDir, "index.html"),
-      shell(body, { title: site.name, description: undefined, script, stylesheets, head, base }),
+      redirectPage({
+        title: config.siteName ?? lead.labels.documentation,
+        lang: lead.locale,
+        href: withBase(base, `/${lead.locale}/`),
+        text: lead.labels.redirect,
+      }),
     );
   }
-  await Bun.write(join(config.outDir, "llms.txt"), llmsTxt(site, placement));
-  await Bun.write(join(config.outDir, "llms-full.txt"), llmsFull(placement, markdown, base));
-  if (ui !== null) {
-    await Bun.write(join(config.outDir, SEARCH_INDEX_FILE), JSON.stringify(searchIndex(pages, { api })));
-  }
 
-  return pages.length;
+  return sites.reduce((total, site) => total + site.pages.length, 0);
 }
 
 function posixPath(path: string): string {

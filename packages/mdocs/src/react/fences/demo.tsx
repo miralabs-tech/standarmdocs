@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import type { Axes } from "../../core/axes";
 import { Island, islandSlot } from "../island";
+import { useLabels } from "../labels-context";
 
 export interface DemoFenceProps {
   readonly id: string;
@@ -29,6 +30,7 @@ export function DemoFence({
   islands,
   source,
 }: DemoFenceProps): ReactNode {
+  const labels = useLabels();
   return (
     <div className="mira-demo" data-mira-demo={id}>
       <div className="mira-demo__stage">
@@ -53,8 +55,8 @@ export function DemoFence({
         // both captions and CSS picks one on `[open]`.
         <details className="mira-demo__code">
           <summary className="mira-demo__toggle">
-            <span className="mira-demo__toggle-shown">Show code</span>
-            <span className="mira-demo__toggle-open">Hide code</span>
+            <span className="mira-demo__toggle-shown">{labels.showCode}</span>
+            <span className="mira-demo__toggle-open">{labels.hideCode}</span>
           </summary>
           {/* biome-ignore lint/security/noDangerouslySetInnerHtml: this site's own demo file, coloured at build time */}
           <div dangerouslySetInnerHTML={{ __html: source }} />

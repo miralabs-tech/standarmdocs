@@ -6,5 +6,7 @@ import { fileURLToPath } from "node:url";
 export default function setup(): void {
   const site = fileURLToPath(new URL("../fixtures/site", import.meta.url));
   const cli = fileURLToPath(new URL("../../src/cli/mdocs.ts", import.meta.url));
+  const locales = fileURLToPath(new URL("../fixtures/locales", import.meta.url));
   execFileSync("bun", [cli, "build", "--chrome=static"], { cwd: site, stdio: "pipe" });
+  execFileSync("bun", [cli, "build", "--chrome=static"], { cwd: locales, stdio: "pipe" });
 }

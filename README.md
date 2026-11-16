@@ -4,7 +4,7 @@
 
 > "Markdown documentation sites with live React demos, prerendered to static HTML."
 
-[Quickstart](#-quickstart) · [Install](#-install) · [Features](#-features) · [Configuration](#-configuration-reference) · [CLI](#-cli-reference) · [Deploy](#-deploy-to-github-pages) · [Limits](#-limits) · [Changelog](./CHANGELOG.md)
+[Quickstart](#-quickstart) · [Install](#-install) · [Features](#-features) · [Configuration](#-configuration-reference) · [CLI](#-cli-reference) · [Deploy](#-deploy-to-github-pages) · [Locales](#-locales) · [Limits](#-limits) · [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -110,6 +110,7 @@ Entry points of the package:
 - **Props tables.** A ```` ```props <name> ```` fence renders `apiDir/<name>.json`, rows of `name`, `type` and `notes`. `apiDir` can be a folder of the site or a folder inside an installed package.
 - **Index and home pages.** ```` ```index <group> ```` renders the pages of a group as cards; a folder without an `index.md` gets a front page listing every page.
 - **Base path.** `base: "/docs/"` (or `--base=/docs/`) prefixes every emitted URL, for a host that serves the site below its root.
+- **Locales.** `locales: ["en", "fr"]` builds one site per language from `contentDir/<locale>/`, with a language switcher, `hreflang` alternates, a root that redirects to the first language, and an `llms.txt` and a search index per language. The chrome's own strings come in English and French and can be overridden.
 - **llms.txt.** The build writes `llms.txt` (following [llmstxt.org](https://llmstxt.org)), `llms-full.txt` and an `index.md` beside every page, written from the source Markdown rather than from the HTML.
 - **Auto chrome.** The sidebar, the table of contents, the axis switcher and the See also list are rendered for you. `--chrome=auto` is the default and wires the interactive behaviours when the optional interactive package resolves, and stays static without a banner when it does not.
 - **Tab strips.** `tabs: ["Keyboard", "Parts", "Props"]` folds the trailing `##` sections of a page into a tab strip.
@@ -136,6 +137,8 @@ Entry points of the package:
 | `tabs` | `string[]?` | The `##` headings that end a page as a tab strip, when they end it in a run. Only the trailing run is folded. Left out, no page has tabs. |
 | `headingSlugs` | `"standardoc" \| "github"?` | How headings get their ids. `standardoc` (default) is an ASCII slug with `-2`, `-3` on a repeat; `github` matches GitHub's anchors. `--slug=` overrides it. |
 | `stylesheets` | `string[]?` | Package specifiers or paths, copied into the output and linked from every page, for example `"@standarx/mdocs/styles/docs.css"`. |
+| `locales` | `string[]?` | The site's languages, such as `["en", "fr"]`; the first is the default. The content of each is read from `contentDir/<locale>/` and served under `/<locale>/`. See [Locales](#-locales). A code must be a language with an optional region (`en`, `pt-BR`); an empty list, a repeat and a locale with no folder are errors. |
+| `labels` | `Record<string, Partial<Labels>>?` | Overrides of the strings the chrome shows, keyed by locale (`{ fr: { seeAlso: "À lire aussi" } }`). Without `locales`, the `en` entry applies. |
 | `scripts` | `string[]?` | Modules the generated entry imports for their side effects, on every page. They are bundled, not copied, and an unresolvable entry fails the build. |
 
 ```ts
@@ -156,6 +159,7 @@ export default defineConfig({
   headingSlugs: "github",
   stylesheets: ["@standarx/mdocs/styles/docs.css"],
   scripts: ["./client/boot.ts"],
+  locales: ["en", "fr"],
 });
 ```
 
@@ -196,6 +200,7 @@ Two roots that claim the same route, or one inside another, are an error naming 
 
 - `<route>/index.html` for every page, and `index.html` at the top.
 - `<route>/index.md` for every page: the title, the description as a quote, then the body without its front matter. `ask` and `demo` fences are removed, `props` becomes tables and `index` becomes a list of links.
+- With `locales`, every route and every file above is under `<locale>/`, `index.html` at the top is the redirect, and the top-level `llms.txt` and `llms-full.txt` are the first locale's.
 - `llms.txt`: the site name, then one `##` section per sidebar category linking each page's `index.md`.
 - `llms-full.txt`: every page's Markdown in sidebar order, each behind a `Source:` line.
 - `assets/`: the bundled client script, the chunks of the demos and the stylesheets.
@@ -222,6 +227,26 @@ export default defineConfig({
 4. Copy [`examples/github-pages.yml`](./examples/github-pages.yml) to `.github/workflows/pages.yml`, set `working-directory` and the artifact `path` to the site's folder, and set **Settings > Pages > Source** to **GitHub Actions**.
 
 The workflow runs on every published release and by hand (`workflow_dispatch`). It installs with `bun install --frozen-lockfile`, runs `mdocs build --base=/<repository>/`, uploads `dist` with `actions/upload-pages-artifact` and publishes it with `actions/deploy-pages`. It needs the `pages: write` and `id-token: write` permissions, which it declares. No `gh-pages` branch is involved.
+
+---
+
+## 🌍 Locales
+
+```ts
+export default defineConfig({
+  // …
+  contentDir: "content",
+  locales: ["en", "fr"],
+  labels: { fr: { seeAlso: "À lire aussi" } },
+});
+```
+
+- **Layout.** The content of a locale lives in `contentDir/<locale>/`, so `content/fr/guide/x.md` is the route `/fr/guide/x` and belongs to the category `guide`. A page directly in the locale folder belongs to no category. Each locale is a site of its own: its sidebar, its home cards, its `index` fences and its See also list only name pages of that locale, and a folder with no `index.md` gets a generated front page at `/<locale>/`.
+- **Root.** `index.html` at the top redirects to the first locale (`<meta http-equiv="refresh">`, a canonical link and a plain link). `<html lang>` is the page's locale.
+- **Switcher.** When there are several locales, the sidebar starts with a language list. Each link goes to the same page in that locale when it exists, otherwise to that locale's home. A page with a translation also carries `<link rel="alternate" hreflang>` for each language it exists in, itself included.
+- **Labels.** The chrome's strings (axis switch, contents, See also, Show code, props table headings, the language switcher) come from a dictionary for each locale: `en` and `fr` ship with the package, a locale with no dictionary reads English, and `fr-CA` reads `fr`. `labels` overrides single entries per locale; `localeName` is what the switcher calls the locale, which is the locale code when neither the package nor `labels` names it. The category labels of `categories` and the `llms.txt` and `index.md` text are not translated.
+- **Output.** `llms.txt` and `llms-full.txt` are written under each `/<locale>/`, and the ones at the top are the first locale's. When the interactive package resolves, `search-index.<locale>.json` is written for each locale at the top of the output, and `search-index.json` holds the first locale's pages.
+- **`mdocs dev`.** It reads `locales` from the config like `mdocs build` does. `--root` and `locales` cannot be combined: `mdocs dev` stops with an error when both are given.
 
 ---
 
