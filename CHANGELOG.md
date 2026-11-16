@@ -6,6 +6,8 @@ All notable changes to `@standarx/mdocs` are documented here. The format follows
 ## Unreleased
 
 - Pages are ordered inside a category by front matter `sidebar.order`.
+- Breaking: the default matrix is one render per demo (`[{}]`). A site that relied on the four MiraLabs variants declares `matrix: MIRALABS_MATRIX` (exported from `@standarx/mdocs`).
+- The axis switcher shows Theme, and Density only when the site's matrix sets it.
 
 ## [0.2.0]
 

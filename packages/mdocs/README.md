@@ -12,7 +12,7 @@
 
 `@standarx/mdocs` turns a folder of Markdown files into a static documentation site. A page is a `.md` file; a fenced block can name a React demo, which is prerendered into the page and then hydrated on its own, so the prose and the chrome stay plain HTML and only the demo runs script.
 
-The boundary between the static page and the interactive demo is **derived by the renderer**: the renderer places the demo, so it knows where the island is, and no author has to mark the right element. Each demo is rendered once per entry of a configurable matrix (theme, density, motion, glass), and the site is also published as plain Markdown, `llms.txt` and `llms-full.txt`.
+The boundary between the static page and the interactive demo is **derived by the renderer**: the renderer places the demo, so it knows where the island is, and no author has to mark the right element. Each demo is rendered once by default, or once per entry of a configurable matrix (theme, density, motion, glass), and the site is also published as plain Markdown, `llms.txt` and `llms-full.txt`.
 
 The package holds the engine and its `mdocs` command line in one place, ESM only, with types. This repository is its home.
 
@@ -106,7 +106,7 @@ Entry points of the package:
 ## ✨ Features
 
 - **Markdown pages.** Front matter (`title`, `description`, `related`), headings with stable anchors, tables, fenced code highlighted with Shiki, and relative `.md` links that are checked at build time.
-- **Live React demos with prerender.** A ```` ```demo <id> ```` fence loads `demosDir/<id>.tsx`, prerenders it into the page and hydrates only that subtree. Each demo is rendered once per entry of the matrix, so a theme, a density or a reduced-motion variant is visible at a glance, and the reader can switch the axes from the page.
+- **Live React demos with prerender.** A ```` ```demo <id> ```` fence loads `demosDir/<id>.tsx`, prerenders it into the page and hydrates only that subtree. Each demo is rendered once, or once per entry of the matrix when the site declares one, so a theme, a density or a reduced-motion variant is visible at a glance, and the reader can switch the theme, and the density when the matrix sets it, from the page.
 - **Props tables.** A ```` ```props <name> ```` fence renders `apiDir/<name>.json`, rows of `name`, `type` and `notes`. `apiDir` can be a folder of the site or a folder inside an installed package.
 - **Index and home pages.** ```` ```index <group> ```` renders the pages of a group as cards; a folder without an `index.md` gets a front page listing every page.
 - **Base path.** `base: "/docs/"` (or `--base=/docs/`) prefixes every emitted URL, for a host that serves the site below its root.
@@ -132,7 +132,7 @@ Entry points of the package:
 | `base` | `string?` | The path the site is served under, such as `"/docs/"`. A leading and a trailing slash are added; a value with `://`, `?` or `#` is refused. Default `"/"`. `--base=<path>` overrides it, and `mdocs dev` ignores it. |
 | `siteName` | `string?` | Appended to every page title as `<page> — <siteName>`. Left out, a page is titled by itself. |
 | `categories` | `{ slug, label, blurb? }[]` | The sidebar groups, in order. A page belongs to the category whose `slug` is the name of its parent folder; a category with no page is drawn nowhere. |
-| `matrix` | `Axes[]?` | Overrides the entries every `demo` fence is rendered over. An entry sets any of `theme` (`"light"` or `"dark"`), `density` (`"desktop"` or `"touch"`), `motion` (`"full"`, `"reduced"` or `"none"`) and `glass` (`"off"`); an axis left out is on auto. The default has four entries: all axes on auto, light, touch, and reduced motion with glass off. |
+| `matrix` | `Axes[]?` | Overrides the entries every `demo` fence is rendered over. An entry sets any of `theme` (`"light"` or `"dark"`), `density` (`"desktop"` or `"touch"`), `motion` (`"full"`, `"reduced"` or `"none"`) and `glass` (`"off"`); an axis left out is on auto. The default is a single entry, every axis on auto, so each demo is rendered once. The page's axis switcher shows Theme, plus Density when the matrix sets it. `MIRALABS_MATRIX` (all axes on auto, light, touch, and reduced motion with glass off) is exported for sites that want the four MiraLabs variants. |
 | `tabs` | `string[]?` | The `##` headings that end a page as a tab strip, when they end it in a run. Only the trailing run is folded. Left out, no page has tabs. |
 | `headingSlugs` | `"standardoc" \| "github"?` | How headings get their ids. `standardoc` (default) is an ASCII slug with `-2`, `-3` on a repeat; `github` matches GitHub's anchors. `--slug=` overrides it. |
 | `stylesheets` | `string[]?` | Package specifiers or paths, copied into the output and linked from every page, for example `"@standarx/mdocs/styles/docs.css"`. |

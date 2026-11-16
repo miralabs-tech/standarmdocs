@@ -24,7 +24,7 @@
  *
  * What replaces them is the other side of the same coin, and it had no witness
  * anywhere until now. The corpus proved the *overrides*; the fixture is the only
- * place that can prove the **defaults** underneath them — four islands where no
+ * place that can prove the **defaults** underneath them — one island where no
  * matrix is declared, and five of six categories drawn nowhere because nothing
  * sits in them. The old file asserted the empty-category rule while three
  * categories were still unported, then dropped it saying it "lives on the fixture
@@ -142,14 +142,14 @@ describe("the sidebar", () => {
 });
 
 describe("the demos", () => {
-  it("renders the default matrix, one island per axis combination", () => {
-    // No `matrix` in this config, so the engine's own default applies: four
-    // copies of every demo. A site that wants one says `matrix: [{}]`, and the
+  it("renders the default matrix, one island per demo", () => {
+    // No `matrix` in this config, so the engine's own default applies: a single
+    // copy of every demo. A site that wants variants declares `matrix`, and the
     // consumer that does is where the override is asserted.
     const fences = [...fs.readFileSync(path.join(content, "components/disclosure/disclosure.md"), "utf8")
       .matchAll(/^```demo\s+\S+/gm)].length;
     expect(fences).toBe(1);
-    expect([...page.matchAll(/data-mira-island=/g)]).toHaveLength(4);
+    expect([...page.matchAll(/data-mira-island=/g)]).toHaveLength(1);
   });
 });
 

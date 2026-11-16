@@ -14,6 +14,7 @@ import {
   axisBootScript,
   type ChromeEntry,
   createHighlight,
+  DEFAULT_MATRIX,
   type DemoRegistry,
   demoIds,
   type Highlight,
@@ -409,6 +410,7 @@ async function buildWith(
     ],
   );
   const degraded = chromeState(options.chrome, ui);
+  const matrix = config.matrix ?? DEFAULT_MATRIX;
   const entries: readonly ChromeEntry[] = pages.map((page) => ({
     route: page.route,
     title: page.title,
@@ -445,6 +447,7 @@ async function buildWith(
         current: page.route,
         degraded,
         base,
+        matrix,
         ...(config.siteName === undefined ? {} : { siteName: config.siteName }),
       },
       registry: registry.DEMOS,
@@ -491,6 +494,7 @@ async function buildWith(
         current: "/",
         degraded,
         base,
+        matrix,
         ...(config.siteName === undefined ? {} : { siteName: config.siteName }),
       },
       registry: registry.DEMOS,

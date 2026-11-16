@@ -18,7 +18,7 @@
 
 import { act } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { DEFAULT_MATRIX } from "../src/core/axes";
+import { MIRALABS_MATRIX } from "../src/core/axes";
 import { type HydratedIsland, hydrateIslands } from "../src/react/hydrate";
 import { ISLAND_ID } from "../src/react/island";
 import { type RenderPageOptions, renderPage } from "../src/react/prerender";
@@ -162,7 +162,7 @@ describe("the page before any script", () => {
     const html = await mountPage();
 
     expect(page().querySelectorAll(`[${ISLAND_ID}]`)).toHaveLength(ISLAND_COUNT);
-    expect(islandsOf("disclosure-basic")).toHaveLength(DEFAULT_MATRIX.length);
+    expect(islandsOf("disclosure-basic")).toHaveLength(MIRALABS_MATRIX.length);
     expect(page().querySelector(".mira-docs__sidebar")).not.toBeNull();
     expect(page().querySelectorAll(".mira-docs__sidebar section")).toHaveLength(3);
     // Five, not four: the fixture's two tables are an interface with four members
