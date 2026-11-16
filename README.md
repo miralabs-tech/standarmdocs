@@ -204,6 +204,21 @@ Links are root-relative and prefixed by `base` when the site has one.
 
 ---
 
+## 🧩 Programmatic build
+
+`@standarx/mdocs/build` runs the same build as `mdocs build` from a script:
+
+```ts
+import { build, loadConfig } from "@standarx/mdocs/build";
+
+const config = await loadConfig(process.cwd());
+await build(config, { chrome: "auto", mode: "production" });
+```
+
+`build` takes the options of the command line (`chrome`, `mode`, …) and `asks: "island"`, which renders `ask` fences as answerable islands the way `mdocs dev` does. `prepareGeneratedRoot(dir)` writes the `tsconfig.json` a build needs in a folder that has no config of its own.
+
+---
+
 ## 🚧 Limits
 
 - The CLI runs on bun, not on node: it builds with `Bun.build` and resolves modules with `Bun.resolveSync`.
