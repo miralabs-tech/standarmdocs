@@ -414,6 +414,7 @@ async function buildWith(
     title: page.title,
     group: page.group,
     description: page.description,
+    order: page.order,
   }));
 
   // Once, before anything is written: a group with no category is a config that

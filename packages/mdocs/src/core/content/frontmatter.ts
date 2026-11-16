@@ -41,6 +41,10 @@ function flowItems(inner: string): string[] {
  * sequence, `related: [/a, "/b"]`, is read into `lists` instead of `data`. Items
  * are split on commas outside quotes and may be quoted; `[]` is an empty list.
  * Block sequences (`- item` lines) are not read.
+ *
+ * One level of nesting is read: a `key:` with no value opens a parent, and the
+ * indented `child: value` lines under it are stored as `key.child`, in `data` or
+ * in `lists` by the same rules. A line that is not indented closes the parent.
  */
 export function parseFrontmatter(source: string): Frontmatter {
   const match = FENCE.exec(source);
@@ -48,13 +52,21 @@ export function parseFrontmatter(source: string): Frontmatter {
 
   const data: Record<string, string> = {};
   const lists: Record<string, string[]> = {};
+  let parent: string | undefined;
   for (const line of match[1].split(/\r?\n/)) {
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
     const colon = trimmed.indexOf(":");
     if (colon === -1) continue;
-    const key = trimmed.slice(0, colon).trim();
+    const indented = /^\s/.test(line);
+    if (!indented) parent = undefined;
+    const name = trimmed.slice(0, colon).trim();
     const raw = trimmed.slice(colon + 1).trim();
+    if (raw === "" && !indented) {
+      parent = name;
+      continue;
+    }
+    const key = indented && parent !== undefined ? `${parent}.${name}` : name;
     if (raw.startsWith("[") && raw.endsWith("]")) {
       lists[key] = flowItems(raw.slice(1, -1));
       continue;

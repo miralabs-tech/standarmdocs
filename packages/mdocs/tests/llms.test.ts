@@ -193,6 +193,46 @@ describe("index", () => {
   });
 });
 
+describe("sidebar.order", () => {
+  const ordered: readonly LlmsEntry[] = [
+    { route: "/g/cli", title: "Cli", group: "g", description: undefined, order: 3 },
+    { route: "/g/installation", title: "Installation", group: "g", description: undefined, order: 2 },
+    { route: "/g/introduction", title: "Introduction", group: "g", description: undefined, order: 1 },
+    { route: "/g/limits", title: "Limits", group: "g", description: undefined },
+  ];
+  const sorted = ["/g/introduction", "/g/installation", "/g/cli", "/g/limits"];
+  const placement: LlmsPlacement = {
+    lead: [],
+    sections: [
+      {
+        category: { label: "G" },
+        items: [ordered[2] as LlmsEntry, ordered[1] as LlmsEntry, ordered[0] as LlmsEntry, ordered[3] as LlmsEntry],
+      },
+    ],
+  };
+
+  it("orders an index fence's Markdown", () => {
+    const text = render("```index g\n```\n", {}, ordered);
+    expect([...text.matchAll(/\]\((\/g\/[a-z]+)\/index\.md\)/g)].map((match) => match[1])).toEqual(sorted);
+  });
+
+  it("keeps the order llms.txt and llms-full.txt are handed", () => {
+    const text = llmsTxt({ name: "N" }, placement);
+    expect([...text.matchAll(/\]\((\/g\/[a-z]+)\/index\.md\)/g)].map((match) => match[1])).toEqual(sorted);
+    const pages = new Map(ordered.map((entry) => [entry.route, `# ${entry.title}\n`]));
+    const full = llmsFull(placement, pages);
+    expect([...full.matchAll(/^Source: (\/g\/[a-z]+)\/index\.md$/gm)].map((match) => match[1])).toEqual(sorted);
+  });
+
+  it("is read from the front matter, and refused when it is not a number", () => {
+    expect(parsePage("---\nsidebar:\n  order: 2\n---\n\nProse.\n", { route: "/x", group: undefined }).order).toBe(2);
+    expect(parsePage("Prose.\n", { route: "/x", group: undefined }).order).toBeUndefined();
+    expect(() =>
+      parsePage("---\nsidebar:\n  order: abc\n---\n\nProse.\n", { route: "/x", group: undefined }),
+    ).toThrowError(/sidebar\.order must be a number in \/x, got "abc"/);
+  });
+});
+
 describe("pageHref", () => {
   it("serves the root and a nested route beside their index.html", () => {
     expect(pageHref("/")).toBe("/index.md");

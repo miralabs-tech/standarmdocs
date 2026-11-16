@@ -10,8 +10,14 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SIDEBAR_CLOSED_KEY, SIDEBAR_SCROLL_KEY } from "../src/core/sidebar";
-import { type ChromeEntry, type ChromeProps, NavBar, StaticChrome } from "../src/react/chrome";
+import { orderEntries, SIDEBAR_CLOSED_KEY, SIDEBAR_SCROLL_KEY } from "../src/core/sidebar";
+import {
+  type ChromeEntry,
+  type ChromeProps,
+  NavBar,
+  placeEntries,
+  StaticChrome,
+} from "../src/react/chrome";
 
 const CATEGORIES = [{ slug: "overlays", label: "Overlays", blurb: "Surfaces that leave the flow." }];
 
@@ -98,6 +104,45 @@ describe("the sidebar", () => {
         entries: [{ route: "/widgets/thing", title: "Thing", group: "widgets", description: undefined }],
       }),
     ).toThrowError(/widgets/);
+  });
+});
+
+describe("page order inside a category", () => {
+  const route = (name: string, order?: number): ChromeEntry => ({
+    route: `/guide/${name}`,
+    title: name,
+    group: "guide",
+    description: undefined,
+    order,
+  });
+
+  it("puts ordered pages first, ascending, tied by route, then the others as given", () => {
+    const entries = [route("c"), route("b", 2), route("a", 2), route("z", 1), route("d")];
+    expect(orderEntries(entries).map((entry) => entry.route)).toEqual([
+      "/guide/z",
+      "/guide/a",
+      "/guide/b",
+      "/guide/c",
+      "/guide/d",
+    ]);
+  });
+
+  it("orders the sidebar section by sidebar.order, not by file path", () => {
+    const entries = [
+      route("cli", 3),
+      route("installation", 2),
+      route("introduction", 1),
+      route("limits"),
+      route("registries"),
+    ];
+    const { sections } = placeEntries([{ slug: "guide", label: "Guide" }], entries);
+    expect(sections[0]?.items.map((entry) => entry.title)).toEqual([
+      "introduction",
+      "installation",
+      "cli",
+      "limits",
+      "registries",
+    ]);
   });
 });
 

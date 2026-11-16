@@ -1,5 +1,6 @@
 import { rootedHref, withBase } from "../base";
 import type { ApiRow, ApiTable, ApiTables, SeeAlsoLink } from "../model";
+import { orderEntries } from "../sidebar";
 import { parseDirective } from "./fences";
 import { parseFrontmatter } from "./frontmatter";
 import { resolveLink } from "./links";
@@ -15,6 +16,7 @@ export interface LlmsEntry {
   readonly title: string;
   readonly description: string | undefined;
   readonly group?: string | undefined;
+  readonly order?: number | undefined;
 }
 
 /**
@@ -163,7 +165,7 @@ export function apiTableMarkdown(table: ApiTable): string {
 }
 
 function indexMarkdown(group: string, entries: readonly LlmsEntry[], base: string): string {
-  const items = entries.filter((entry) => entry.group === group);
+  const items = orderEntries(entries.filter((entry) => entry.group === group));
   if (items.length === 0) throw new Error(`\`\`\`index ${group} matches no page`);
   return items.map((entry) => entryLine(entry, base)).join("\n");
 }
