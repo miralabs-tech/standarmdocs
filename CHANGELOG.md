@@ -3,7 +3,7 @@
 All notable changes to `@standarx/mdocs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## [0.3.0]
 
 - Pages are ordered inside a category by front matter `sidebar.order`.
 - Breaking: the default matrix is one render per demo (`[{}]`). A site that relied on the four MiraLabs variants declares `matrix: MIRALABS_MATRIX` (exported from `@standarx/mdocs`).
