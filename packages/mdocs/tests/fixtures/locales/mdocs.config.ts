@@ -7,6 +7,6 @@ export default defineConfig({
   siteName: "Locales Fixture",
   base: "/docs/",
   locales: ["en", "fr"],
-  categories: [{ slug: "guide", label: "Guide" }],
+  categories: [{ slug: "guide", label: "Guide", labels: { fr: "Guide d'utilisation" } }],
   stylesheets: ["@standarx/mdocs/styles/docs.css"],
 });

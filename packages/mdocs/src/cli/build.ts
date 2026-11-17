@@ -14,6 +14,7 @@ import {
   type ApiTables,
   axisBootScript,
   assertLocales,
+  type ChromeCategory,
   type ChromeEntry,
   type ChromeLanguage,
   type ChromeProps,
@@ -124,11 +125,20 @@ function loadApi(apiDir: string): ApiTables {
 export function chromeState(
   chrome: BuildOptions["chrome"],
   ui: UiPackage | null,
+  labels: Labels = labelsFor("en"),
 ): string | null {
-  if (chrome === "live" && ui === null) {
-    return "Rendered with the static chrome: @standardoc/ui is not installed.";
-  }
+  if (chrome === "live" && ui === null) return labels.staticChrome;
   return null;
+}
+
+function localized(category: ChromeCategory, locale: string | undefined): ChromeCategory {
+  if (locale === undefined) return category;
+  const blurb = category.blurbs?.[locale] ?? category.blurb;
+  return {
+    ...category,
+    label: category.labels?.[locale] ?? category.label,
+    ...(blurb === undefined ? {} : { blurb }),
+  };
 }
 
 const DEMO_EXTENSIONS = [".tsx", ".ts", ".jsx", ".js"];
@@ -325,6 +335,8 @@ export async function build(config: ResolvedConfig, options: BuildOptions): Prom
 interface LocaleSite {
   readonly locale: string | undefined;
   readonly labels: Labels;
+  readonly categories: readonly ChromeCategory[];
+  readonly degraded: string | null;
   readonly pages: readonly PageModel[];
   readonly entries: readonly ChromeEntry[];
   readonly placement: ReturnType<typeof placeEntries>;
@@ -492,7 +504,6 @@ async function buildWith(
       ...(theme === null ? [] : [theme.theme]),
     ],
   );
-  const degraded = chromeState(options.chrome, ui);
   const matrix = config.matrix ?? DEFAULT_MATRIX;
 
   // Once per locale, before anything is written: a group with no category is a
@@ -508,12 +519,16 @@ async function buildWith(
       description: page.description,
       order: page.order,
     }));
+    const labels = labelsFor(locale ?? "en", config.labels?.[locale ?? "en"]);
+    const categories = config.categories.map((category) => localized(category, locale));
     return {
       locale,
-      labels: labelsFor(locale ?? "en", config.labels?.[locale ?? "en"]),
+      labels,
+      categories,
+      degraded: chromeState(options.chrome, ui, labels),
       pages,
       entries,
-      placement: placeEntries(config.categories, entries),
+      placement: placeEntries(categories, entries),
       home: locale === undefined ? "/" : `/${locale}`,
     };
   });
@@ -527,7 +542,10 @@ async function buildWith(
 
   const head = `<script>${axisBootScript()}</script>`;
 
-  for (const [position, { locale, labels, pages, entries, placement, home }] of sites.entries()) {
+  for (const [
+    position,
+    { locale, labels, categories, degraded, pages, entries, placement, home },
+  ] of sites.entries()) {
     const files = new Map(
       pages.flatMap((page): [string, string][] =>
         page.origin === undefined
@@ -540,7 +558,7 @@ async function buildWith(
     );
     const markdown = new Map<string, string>();
     const chromeOf = (route: string): ChromeProps => ({
-      categories: config.categories,
+      categories,
       entries,
       current: route,
       degraded,
@@ -581,7 +599,7 @@ async function buildWith(
       const text = pageMarkdown(
         readSource(config, page),
         page.origin === undefined ? page : { ...page, file: posixPath(realpathOf(page.origin.path)) },
-        { api, entries, files, base },
+        { api, entries, files, base, labels },
       );
       markdown.set(page.route, text);
       await Bun.write(join(dirname(file), "index.md"), text);

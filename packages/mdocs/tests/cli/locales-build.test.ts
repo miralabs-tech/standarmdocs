@@ -129,6 +129,33 @@ describe("llms.txt of a locale", () => {
   });
 });
 
+describe("the category of a locale", () => {
+  it("takes the label of that locale in the sidebar, the home and llms.txt", () => {
+    for (const file of ["fr/guide/a/index.html", "fr/index.html"]) {
+      expect(read(file), file).toContain("Guide d&#x27;utilisation");
+    }
+    expect(read("fr/llms.txt")).toContain("## Guide d'utilisation");
+  });
+
+  it("keeps the default label in the other locale", () => {
+    expect(read("en/guide/a/index.html")).not.toContain("Guide d");
+    expect(read("en/index.html")).not.toContain("Guide d");
+    expect(read("en/llms.txt")).toContain("## Guide\n");
+  });
+});
+
+describe("the generated Markdown of a locale", () => {
+  it("ends a French page on Voir aussi", () => {
+    const text = read("fr/guide/a/index.md");
+    expect(text).toContain("## Voir aussi\n\n- [Gamma en français](/docs/fr/guide/c/index.md)");
+    expect(text).not.toContain("See also");
+  });
+
+  it("ends an English page on See also", () => {
+    expect(read("en/guide/a/index.md")).toContain("## See also");
+  });
+});
+
 describe("a site with locales that cannot be built", () => {
   let scratch = "";
 
