@@ -3,6 +3,10 @@
 All notable changes to `@standarx/mdocs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1]
+
+- The language switcher is drawn like the axis switch: the current language no longer takes the accent fill of the current page.
+
 ## [0.4.0]
 
 - Categories follow the locale: `labels` and `blurbs` on a `categories` entry map a locale to its label and blurb, and `label` and `blurb` stay the fallback. The sidebar, the home, the placement and `llms.txt` of each locale use them.
