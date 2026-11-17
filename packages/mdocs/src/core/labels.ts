@@ -19,6 +19,8 @@ export interface Labels {
   readonly language: string;
   readonly localeName: string;
   readonly redirect: string;
+  readonly propsName: string;
+  readonly staticChrome: string;
 }
 
 export const LABELS: Readonly<Record<"en" | "fr", Labels>> = {
@@ -43,6 +45,8 @@ export const LABELS: Readonly<Record<"en" | "fr", Labels>> = {
     language: "Language",
     localeName: "English",
     redirect: "Continue to the documentation",
+    propsName: "Name",
+    staticChrome: "Rendered with the static chrome: @standardoc/ui is not installed.",
   },
   fr: {
     documentation: "Documentation",
@@ -65,6 +69,8 @@ export const LABELS: Readonly<Record<"en" | "fr", Labels>> = {
     language: "Langue",
     localeName: "Français",
     redirect: "Continuer vers la documentation",
+    propsName: "Nom",
+    staticChrome: "Rendu avec le chrome statique : @standardoc/ui n'est pas installé.",
   },
 };
 

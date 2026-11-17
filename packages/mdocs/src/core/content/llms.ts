@@ -1,4 +1,5 @@
 import { rootedHref, withBase } from "../base";
+import { type Labels, LABELS } from "../labels";
 import type { ApiRow, ApiTable, ApiTables, SeeAlsoLink } from "../model";
 import { orderEntries } from "../sidebar";
 import { parseDirective } from "./fences";
@@ -41,6 +42,8 @@ export interface PageMarkdownContext {
   readonly files?: ReadonlyMap<string, string> | undefined;
   /** The path the site is served under, normalized. Absent, `/`. */
   readonly base?: string | undefined;
+  /** The page's locale dictionary. Absent, English. */
+  readonly labels?: Labels | undefined;
 }
 
 function relinked(
@@ -133,7 +136,7 @@ function rowRuns(rows: readonly ApiRow[]): readonly RowRun[] {
  * itself in one line, `= …` for an alias and `extends …` for an interface, as the
  * page does in its single cell.
  */
-export function apiTableMarkdown(table: ApiTable): string {
+export function apiTableMarkdown(table: ApiTable, labels: Labels = LABELS.en): string {
   const inherited = table.extends == null ? null : `extends ${table.extends}`;
   const defined = table.definition == null ? null : `= ${table.definition}`;
   const blocks = [`### ${table.name}`];
@@ -150,7 +153,7 @@ export function apiTableMarkdown(table: ApiTable): string {
     if (run.label !== null) blocks.push(`**${run.label.replace(/\s*\r?\n\s*/g, " ")}**`);
     blocks.push(
       [
-        "| Name | Type | Notes |",
+        `| ${labels.propsName} | ${labels.type} | ${labels.notes} |`,
         "| --- | --- | --- |",
         ...run.rows.map(
           (row) =>
@@ -206,6 +209,7 @@ export function pageMarkdown(
   const parsed = parseFrontmatter(source.replace(/\r\n?/g, "\n"));
   const { data } = parsed;
   const base = context.base ?? "/";
+  const labels = context.labels ?? LABELS.en;
   const body =
     model.file !== undefined && context.files !== undefined
       ? relinked(parsed.body, model.file, context.files, base)
@@ -230,7 +234,7 @@ export function pageMarkdown(
     if (directive.kind === "props") {
       const tables = context.api[directive.argument];
       if (tables !== undefined && tables.length > 0) {
-        replacement = tables.map(apiTableMarkdown).join("\n\n");
+        replacement = tables.map((table) => apiTableMarkdown(table, labels)).join("\n\n");
       }
     } else if (directive.kind === "index") {
       replacement = indexMarkdown(directive.argument, context.entries, base);
@@ -266,7 +270,7 @@ export function pageMarkdown(
     );
   }
   const related = model.seeAlso ?? [];
-  const seeAlso = related.length === 0 ? [] : ["## See also", related.map((entry) => entryLine(entry, base)).join("\n")];
+  const seeAlso = related.length === 0 ? [] : [`## ${labels.seeAlso}`, related.map((entry) => entryLine(entry, base)).join("\n")];
   return `${[...head, ...(text === "" ? [] : [text]), ...seeAlso].join("\n\n")}\n`;
 }
 

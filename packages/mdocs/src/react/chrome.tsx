@@ -16,6 +16,8 @@ export interface ChromeCategory {
   readonly slug: string;
   readonly label: string;
   readonly blurb?: string;
+  readonly labels?: Readonly<Record<string, string>>;
+  readonly blurbs?: Readonly<Record<string, string>>;
 }
 
 export interface ChromeEntry {
