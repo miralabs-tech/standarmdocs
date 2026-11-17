@@ -362,6 +362,38 @@ body {
   outline-offset: var(--docs-focus-ring-offset);
 }
 
+/*
+ * Drawn like the axis switch, not like the page list below it: with the accent
+ * fill of the current page, the current language read as a second current page.
+ */
+.mira-docs__languages {
+  margin-block-end: var(--docs-space-5);
+}
+
+.mira-docs__sidebar .mira-docs__languages ul {
+  display: flex;
+  gap: var(--docs-border-width-thin);
+  padding: var(--docs-border-width-thin);
+  border: var(--docs-border-width-thin) solid var(--docs-border);
+  border-radius: var(--docs-radius-md);
+  background: var(--docs-fill);
+}
+
+.mira-docs__languages li {
+  flex: 1;
+}
+
+.mira-docs__sidebar .mira-docs__languages a {
+  text-align: center;
+  font-size: var(--docs-text-xs);
+}
+
+.mira-docs__sidebar .mira-docs__languages a[aria-current="page"] {
+  background: var(--docs-elevated);
+  font-weight: var(--docs-font-weight-semibold);
+  color: var(--docs-fg);
+}
+
 /* ------------------------------------------------------------------------- */
 /* Search trigger                                                             */
 /* ------------------------------------------------------------------------- */
